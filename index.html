@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Painel — Agência Dipe (filtro + relatório)</title>
+<title>Painel — Agência Dipe (Completo)</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -14,13 +14,15 @@
   *{box-sizing:border-box}
   body{margin:0; font:15px/1.6 Roboto,system-ui,-apple-system,Segoe UI,Helvetica,Arial; color:var(--ink); background:var(--paper)}
   .wrap{max-width:1100px; margin:24px auto; padding:0 16px}
-  h1{margin:0 0 14px; font-size:22px; font-weight:900}
+  h1{margin:0 0 6px; font-size:22px; font-weight:900}
   .sub{color:var(--muted); margin-bottom:12px}
+  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 
   .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; background:#fff; padding:10px; border:1px solid var(--border); border-radius:12px}
   .input{border:1px solid var(--border); background:#fff; border-radius:10px; padding:10px 12px; min-width:260px}
   .select,.btn{border:1px solid var(--border); background:#fff; border-radius:10px; padding:10px 12px; cursor:pointer}
   .btn{font-weight:900}
+  .btn.ghost{background:#fffdf8}
   .chip{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); background:#fff; border-radius:999px; padding:4px 10px; font-weight:900}
   .chip.dot:before{content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--accent)}
   .chip.c-construcione{color:var(--c-construcione); border-color:var(--c-construcione)}
@@ -53,6 +55,8 @@
   .st.atrasado .dot{background:var(--warn)}
   .st.feito .dot{background:var(--ok)}
   .done{opacity:.55; text-decoration:line-through}
+  .trash{margin-left:6px; cursor:pointer; opacity:.6}
+  .trash:hover{opacity:1}
 
   /* Relatório por cliente */
   table{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden}
@@ -62,12 +66,16 @@
   .right{text-align:right}
   .clientsBar{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 12px}
   .muted{color:var(--muted); font-size:13px}
+
+  /* Footer tips */
+  .help{margin:14px 0; color:var(--muted); font-size:12px}
+  .err{display:none; background:#fdecea; color:#b71c1c; border:1px solid #f5c6c6; padding:10px 12px; margin:10px auto; border-radius:8px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Painel de Tarefas — Agência Dipe</h1>
-  <div class="sub">Busca, filtros, exportação e estatísticas por cliente.</div>
+  <div class="sub">Busca, filtros, exportação, duplicar semana e estatísticas por cliente.</div>
 
   <!-- Barra da semana -->
   <div class="weekbar">
@@ -75,11 +83,13 @@
     <div class="range" id="weekRange">Semana</div>
     <button class="btn icon" id="nextW">▶</button>
     <input class="select" type="date" id="weekPick" />
+    <button class="btn ghost" id="dupWeek">Duplicar semana…</button>
+    <button class="btn ghost" id="clearWeek">Limpar semana</button>
   </div>
 
   <!-- Toolbar -->
   <div class="toolbar">
-    <input class="input" id="q" placeholder="Buscar por título/nota/cliente..." />
+    <input class="input" id="q" placeholder="Buscar por título/cliente..." />
     <label class="chip dot"><input id="hideDone" type="checkbox" style="margin-right:6px" checked> Ocultar concluídas</label>
     <select class="select" id="statusSel" aria-label="Status">
       <option value="todas">Status: Todas</option>
@@ -89,6 +99,11 @@
       <option value="feito">Feito</option>
     </select>
     <button class="btn" id="csvBtn">Exportar CSV</button>
+    <button class="btn" id="jsonExp">Exportar JSON</button>
+    <label class="btn">
+      Importar JSON
+      <input type="file" id="jsonImp" accept="application/json" style="display:none">
+    </label>
     <div style="flex:1"></div>
     <!-- Adicionar tarefa rápida -->
     <select class="select" id="qaClient">
@@ -121,12 +136,15 @@
     </div>
   </div>
 
-  <p class="muted" style="margin-top:14px">Dica: clique no “status” ao lado de cada tarefa para alternar (Parado → Em produção → Atrasado → Feito). Clique no texto para marcar/desmarcar concluída.</p>
+  <div id="err" class="err"></div>
+  <p class="help">Dica: clique no “status” ao lado de cada tarefa para alternar (Parado → Em produção → Atrasado → Feito). Clique no texto para marcar/desmarcar concluída. Ícone 🗑️ apaga.</p>
 </div>
 
 <script>
 (function(){
-  // ------------ Utilidades de data ------------
+  function showErr(msg){ var e=document.getElementById('err'); e.style.display='block'; e.textContent=msg; }
+  window.addEventListener('error', function(e){ showErr('Erro de script: ' + (e.message || e.toString())); });
+
   function pad(n){return (n<10?'0':'')+n;}
   function toISO(d){d.setHours(0,0,0,0);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
   function fromISO(s){var p=s.split('-').map(function(x){return parseInt(x,10)});var d=new Date(p[0],p[1]-1,p[2]);d.setHours(0,0,0,0);return d;}
@@ -134,7 +152,6 @@
   function addDaysISO(iso,days){var d=fromISO(iso);d.setDate(d.getDate()+days);return toISO(d);}
   function brDay(d){ var w=['dom','seg','ter','qua','qui','sex','sáb']; return w[d.getDay()]+'. '+pad(d.getDate())+'/'+pad(d.getMonth()+1); }
 
-  // ------------ Dados / Estado ------------
   var STATUS=['parado','em_producao','atrasado','feito'];
   var LABEL={parado:'Parado', em_producao:'Em produção', atrasado:'Atrasado', feito:'Feito'};
   var PILL={'Construcione':'c-construcione','Matec':'c-matec','Vertticom':'c-vertticom','LRocha':'c-lrocha'};
@@ -143,15 +160,13 @@
   var tasks=[]; // {id, title, client, status, day, done}
   var activeClient = 'todos';
 
-  // ------------ Storage ------------
-  function key(){return 'dipe_pro_week_'+weekStart;}
+  function key(){return 'dipe_full_week_'+weekStart;}
   function canLS(){try{localStorage.setItem('__t','1');localStorage.removeItem('__t');return true;}catch(e){return false;}}
   function load(){
     if(canLS()){
       var raw=localStorage.getItem(key());
-      if(raw){try{var data=JSON.parse(raw); if(data&&data.length) return data;}catch(e){}}
+      if(raw){try{var data=JSON.parse(raw); if(data&&data.length!=null) return data;}catch(e){}}
     }
-    // seed
     var tue=addDaysISO(weekStart,1), wed=addDaysISO(weekStart,2), thu=addDaysISO(weekStart,3);
     var s=[
       {id:'a1',client:'Matec',title:'Post Café Cultural Sto.Agostinho',status:'parado',day:tue,done:false},
@@ -170,7 +185,6 @@
   }
   function save(){ if(canLS()){ try{ localStorage.setItem(key(), JSON.stringify(tasks)); }catch(e){} } }
 
-  // ------------ Elementos ------------
   var weekRange=document.getElementById('weekRange');
   var weekPick=document.getElementById('weekPick');
   var agenda=document.getElementById('agenda');
@@ -178,25 +192,49 @@
   var hideDone=document.getElementById('hideDone');
   var statusSel=document.getElementById('statusSel');
   var csvBtn=document.getElementById('csvBtn');
+  var jsonExp=document.getElementById('jsonExp');
+  var jsonImp=document.getElementById('jsonImp');
   var clientsBar=document.getElementById('clientsBar');
   var tblClients=document.getElementById('tblClients');
 
-  // Quick add
   var qaClient=document.getElementById('qaClient');
   var qaTitle=document.getElementById('qaTitle');
   var qaStatus=document.getElementById('qaStatus');
   var qaDay=document.getElementById('qaDay');
 
-  // ------------ Navegação semana ------------
   document.getElementById('prevW').addEventListener('click', function(){ gotoWeek(addDaysISO(weekStart,-7)); });
   document.getElementById('nextW').addEventListener('click', function(){ gotoWeek(addDaysISO(weekStart, 7)); });
   weekPick.addEventListener('change', function(e){ if(!e.target.value) return; gotoWeek(toISO(mondayOf(fromISO(e.target.value)))); });
 
-  // ------------ Filtros / eventos ------------
+  document.getElementById('dupWeek').addEventListener('click', function(){
+    var target = prompt('Duplicar esta semana para qual segunda-feira? (AAAA-MM-DD)');
+    if(!target) return;
+    if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(target)){ alert('Data inválida. Use AAAA-MM-DD.'); return; }
+    var monday = toISO(mondayOf(fromISO(target)));
+    var outKey = 'dipe_full_week_'+monday;
+    var out = [];
+    for(var i=0;i<tasks.length;i++){
+      var t=tasks[i];
+      var offset=(fromISO(t.day).getTime()-fromISO(weekStart).getTime())/(1000*3600*24);
+      var nt = {id:String(Math.random()).slice(2,9), client:t.client, title:t.title, status:t.status, day:addDaysISO(monday, offset), done:false};
+      out.push(nt);
+    }
+    try{ localStorage.setItem(outKey, JSON.stringify(out)); }catch(e){}
+    if(confirm('Semana duplicada! Ir para a semana '+monday+' agora?')){ gotoWeek(monday); }
+  });
+
+  document.getElementById('clearWeek').addEventListener('click', function(){
+    if(confirm('Limpar TODAS as tarefas desta semana?')){
+      tasks=[]; save(); renderAll();
+    }
+  });
+
   q.addEventListener('input', renderAll);
   hideDone.addEventListener('change', renderAll);
   statusSel.addEventListener('change', renderAll);
   csvBtn.addEventListener('click', exportCSV);
+  jsonExp.addEventListener('click', exportJSON);
+  jsonImp.addEventListener('change', importJSON);
 
   document.getElementById('qaAdd').addEventListener('click', function(){
     var title=(qaTitle.value||'').trim();
@@ -205,16 +243,13 @@
     qaTitle.value=''; save(); renderAll();
   });
 
-  // ------------ Render principal ------------
   function renderAll(){
-    // range da semana
     var start=fromISO(weekStart); var end=fromISO(addDaysISO(weekStart,6));
     weekRange.textContent = 'Semana ' + pad(start.getDate()) + '/' + pad(start.getMonth()+1) + ' – ' + pad(end.getDate()) + '/' + pad(end.getMonth()+1);
     weekPick.value = weekStart;
 
-    // preencher select de dia do quick add
     qaDay.innerHTML='';
-    var dlist=[]; var i;
+    var dlist=[], i;
     for(i=0;i<7;i++){ dlist.push(addDaysISO(weekStart,i)); }
     for(i=0;i<dlist.length;i++){ var d=fromISO(dlist[i]); var o=document.createElement('option'); o.value=dlist[i]; o.textContent=brDay(d); qaDay.appendChild(o); }
     if(!qaDay.value) qaDay.value=dlist[0];
@@ -225,7 +260,7 @@
 
   function getFiltered(){
     var txt=(q.value||'').toLowerCase();
-    var st=statusSel.value; // 'todas' ou status
+    var st=statusSel.value;
     var out=[], i;
     for(i=0;i<tasks.length;i++){
       var t=tasks[i];
@@ -258,7 +293,7 @@
         var t=dayArr[i];
         var li=document.createElement('li');
         if(t.done) li.className='done';
-        // [cliente] Título  + chip de status
+
         var tag=document.createElement('span'); tag.className='tag '+(PILL[t.client]||''); tag.textContent=t.client; li.appendChild(tag);
 
         var txt=document.createElement('span'); txt.textContent=' '+t.title; txt.style.cursor='pointer';
@@ -272,6 +307,10 @@
         st.onclick=(function(ref){ return function(){ var idx=0,j; for(j=0;j<STATUS.length;j++){ if(STATUS[j]===ref.status){ idx=j; break; } } ref.status=STATUS[(idx+1)%STATUS.length]; save(); renderAll(); }; })(t);
         li.appendChild(st);
 
+        var del=document.createElement('span'); del.className='trash'; del.title='Excluir'; del.textContent='🗑️';
+        del.onclick=(function(ref){ return function(){ if(confirm('Excluir esta tarefa?')){ var k, arr=[]; for(k=0;k<tasks.length;k++){ if(tasks[k].id!==ref.id) arr.push(tasks[k]); } tasks=arr; save(); renderAll(); } }; })(t);
+        li.appendChild(del);
+
         ul.appendChild(li);
       }
       agenda.appendChild(ul);
@@ -279,7 +318,6 @@
   }
 
   function renderClients(){
-    // contagem por cliente
     var map={}, i;
     for(i=0;i<tasks.length;i++){
       var c=tasks[i].client;
@@ -287,7 +325,6 @@
       map[c].total++; if(tasks[i].done) map[c].done++;
     }
 
-    // chips de filtro
     clientsBar.innerHTML='';
     var all=document.createElement('button'); all.className='chip'+(activeClient==='todos'?' active':''); all.textContent='Todos';
     all.onclick=function(){ activeClient='todos'; renderAll(); };
@@ -299,7 +336,6 @@
       clientsBar.appendChild(b);
     }
 
-    // tabela
     tblClients.innerHTML='';
     for(var cName in map){
       var tr=document.createElement('tr');
@@ -317,15 +353,40 @@
     for(var i=0;i<filtered.length;i++){
       var t=filtered[i];
       var d=fromISO(t.day);
-      rows.push([brDay(d), t.day, t.client, t.title.replace(/\\n/g,' '), LABEL[t.status]||t.status, t.done?'Sim':'Não']);
+      rows.push([brDay(d), t.day, t.client, String(t.title).replace(/\n/g,' '), LABEL[t.status]||t.status, t.done?'Sim':'Não']);
     }
     var csv = '';
-    for(i=0;i<rows.length;i++){ csv += rows[i].map(function(s){ s=String(s); if(s.indexOf(',')>-1 || s.indexOf('"')>-1){ s='"'+s.replace(/"/g,'""')+'"'; } return s; }).join(',') + '\\n'; }
+    for(var r=0;r<rows.length;r++){ csv += rows[r].map(function(s){ s=String(s); if(s.indexOf(',')>-1 || s.indexOf('"')>-1){ s='"'+s.replace(/"/g,'""')+'"'; } return s; }).join(',') + '\n'; }
     var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'tarefas-semana.csv';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tarefas-semana.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  function exportJSON(){
+    var data = JSON.stringify({weekStart:weekStart, tasks:tasks}, null, 2);
+    var blob = new Blob([data], {type:'application/json'});
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='tarefas-'+weekStart+'.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  function importJSON(evt){
+    var f = evt.target.files[0]; if(!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var data = JSON.parse(reader.result);
+        var arr = data.tasks || data;
+        if(!arr || !arr.length){ alert('Arquivo sem tarefas.'); return; }
+        if(confirm('Importar e mesclar com a semana atual?')){
+          for(var i=0;i<arr.length;i++){
+            var t=arr[i];
+            if(!t.day){ t.day = weekStart; }
+            tasks.push({id:String(Math.random()).slice(2,9), client:t.client||'Cliente', title:t.title||'(sem título)', status:t.status||'parado', day:t.day, done:!!t.done});
+          }
+          save(); renderAll();
+        }
+      }catch(e){ alert('JSON inválido.'); }
+      evt.target.value='';
+    };
+    reader.readAsText(f);
   }
 
   function gotoWeek(startISO){
@@ -334,7 +395,6 @@
     renderAll();
   }
 
-  // init
   gotoWeek(toISO(mondayOf(new Date())));
 })();
 </script>
