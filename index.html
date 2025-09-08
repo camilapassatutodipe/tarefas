@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Painel de Tarefas Semanais — Agência Dipe (versão simples)</title>
+<title>Painel de Tarefas Semanais — Agência Dipe (compat)</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -50,9 +50,12 @@
   .dotStatus.parado{background:var(--idle)} .dotStatus.em_producao{background:var(--work)} .dotStatus.atrasado{background:var(--warn)} .dotStatus.feito{background:var(--ok)}
   .del{border:1px solid var(--border); border-radius:8px; background:#fff; width:34px; height:34px; display:grid; place-items:center; cursor:pointer}
   .help{margin-top:14px; font-size:12px; color:var(--muted)}
+  .err{display:none; background:#fdecea; color:#b71c1c; border:1px solid #f5c6c6; padding:10px 12px; margin:10px auto; border-radius:8px}
 </style>
 </head>
 <body>
+  <div id="err" class="container err"></div>
+
   <header>
     <div class="container brand">
       <div class="dot"></div>
@@ -78,123 +81,240 @@
     <section class="quickAdd">
       <div class="row">
         <select class="select" id="qaClient" aria-label="Cliente">
-          <option>Construcione</option><option>Matec</option><option>Vertticom</option><option>LRocha</option>
+          <option>Construcione</option>
+          <option>Matec</option>
+          <option>Vertticom</option>
+          <option>LRocha</option>
         </select>
         <input class="input" id="qaTitle" placeholder="Nova tarefa..." aria-label="Título da tarefa"/>
         <select class="select" id="qaStatus" aria-label="Status">
-          <option value="parado">Parado</option><option value="em_producao">Em produção</option><option value="atrasado">Atrasado</option><option value="feito">Feito</option>
+          <option value="parado">Parado</option>
+          <option value="em_producao">Em produção</option>
+          <option value="atrasado">Atrasado</option>
+          <option value="feito">Feito</option>
         </select>
         <select class="select" id="qaDay" aria-label="Dia"></select>
       </div>
-      <div><button class="btn" id="qaAdd">Adicionar</button></div>
+      <div>
+        <button class="btn" id="qaAdd">Adicionar</button>
+      </div>
     </section>
 
     <div id="listWrap"></div>
+
     <p class="help">Dica: clique no status para alternar (Parado → Em produção → Atrasado → Feito) e use o check ✅ para concluir.</p>
   </main>
 
 <script>
 (function(){
-  function pad(n){return (n<10?"0":"")+n}
-  function toISO(d){d.setHours(0,0,0,0);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
-  function fromISO(s){const [y,m,dd]=s.split("-").map(Number);const d=new Date(y,m-1,dd);d.setHours(0,0,0,0);return d}
-  function mondayOf(d){const day=d.getDay();const diff=(day===0?-6:1-day);const nd=new Date(d);nd.setDate(d.getDate()+diff);nd.setHours(0,0,0,0);return nd}
-  function addDaysISO(iso,days){const d=fromISO(iso);d.setDate(d.getDate()+days);return toISO(d)}
-  function uid(){return Math.random().toString(36).slice(2,9)}
+  // ---- Tratador de erros visível (se algo bloquear JS) ----
+  window.addEventListener('error', function(e){
+    var box=document.getElementById('err');
+    if(!box) return;
+    box.style.display='block';
+    box.textContent='Erro de script: ' + (e.message || e.toString()) + '. Atualize a página (Ctrl/Cmd+Shift+R).';
+  });
 
-  const STATUS=["parado","em_producao","atrasado","feito"];
-  const LABEL={parado:"Parado", em_producao:"Em produção", atrasado:"Atrasado", feito:"Feito"};
-  const PILL_CLASS={Construcione:"c-construcione", Matec:"c-matec", Vertticom:"c-vertticom", LRocha:"c-lrocha"};
+  // ---- Utilidades de data (100% compat) ----
+  function pad(n){ return (n<10?'0':'') + n; }
+  function toISO(d){ d.setHours(0,0,0,0); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function fromISO(s){ var p=s.split('-'); var d=new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10)); d.setHours(0,0,0,0); return d; }
+  function mondayOf(d){ var day=d.getDay(); var diff=(day===0?-6:1-day); var nd=new Date(d); nd.setDate(d.getDate()+diff); nd.setHours(0,0,0,0); return nd; }
+  function addDaysISO(iso,days){ var d=fromISO(iso); d.setDate(d.getDate()+days); return toISO(d); }
 
-  let weekStart = toISO(mondayOf(new Date()));
-  let tasks=[]; let activeTab="semana";
-  function key(){return "dipe_simple_week_"+weekStart}
-  function load(){
-    const raw=localStorage.getItem(key());
-    if(raw){try{const data=JSON.parse(raw); if(Array.isArray(data)&&data.length) return data;}catch{}}
-    const tue=addDaysISO(weekStart,1), wed=addDaysISO(weekStart,2);
-    const seed=[
-      {id:uid(),client:"Construcione",title:"Post Setembro Amarelo",status:"parado",day:tue},
-      {id:uid(),client:"Construcione",title:"Banner Setembro Amarelo",status:"parado",day:tue},
-      {id:uid(),client:"Construcione",title:"Layout Site",status:"parado",day:tue},
-      {id:uid(),client:"Construcione",title:"Enviar texturas clara e escura",status:"parado",day:tue},
-      {id:uid(),client:"Matec",title:"Logo Amarelo p/ redes sociais",status:"parado",day:tue},
-      {id:uid(),client:"Matec",title:"Mascote Gente e Gestão",status:"parado",day:tue},
-      {id:uid(),client:"Vertticom",title:"Arrumar página de empreendimento",status:"parado",day:tue},
-      {id:uid(),client:"Construcione",title:"Pesquisar Ideia de Layout",status:"parado",day:wed},
-      {id:uid(),client:"Construcione",title:"Start no desenho da Home",status:"parado",day:wed},
-      {id:uid(),client:"Construcione",title:"Desenvolver home",status:"parado",day:wed},
-      {id:uid(),client:"Matec",title:"Post do Dia",status:"parado",day:wed},
-      {id:uid(),client:"Matec",title:"Terminar Mascote",status:"parado",day:wed},
-      {id:uid(),client:"Vertticom",title:"Ajustar empreendimento",status:"parado",day:wed}
-    ];
-    localStorage.setItem(key(), JSON.stringify(seed)); return seed;
+  var weekNamesShort=['dom','seg','ter','qua','qui','sex','sáb'];
+  var weekNamesLong=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+
+  // ---- Constantes / Estado ----
+  var STATUS=['parado','em_producao','atrasado','feito'];
+  var LABEL={parado:'Parado', em_producao:'Em produção', atrasado:'Atrasado', feito:'Feito'};
+  var PILL_CLASS={Construcione:'c-construcione', Matec:'c-matec', Vertticom:'c-vertticom', LRocha:'c-lrocha'};
+
+  var weekStart = toISO(mondayOf(new Date()));
+  var tasks=[]; // {id, client, title, status, day}
+  var activeTab='semana';
+
+  // ---- Storage com fallback ----
+  function storageOK(){
+    try{ var x='__t'; localStorage.setItem(x,'1'); localStorage.removeItem(x); return true; }catch(e){ return false; }
   }
-  function save(){localStorage.setItem(key(), JSON.stringify(tasks))}
-  const progressFill=document.getElementById("progressFill");
-  const doneCount=document.getElementById("doneCount");
-  const totalCount=document.getElementById("totalCount");
-  const tabs=document.getElementById("tabs");
-  const listWrap=document.getElementById("listWrap");
+  function key(){ return 'dipe_simple_week_'+weekStart; }
+  function load(){
+    if(storageOK()){
+      var raw=localStorage.getItem(key());
+      if(raw){ try{ var data=JSON.parse(raw); if(data && data.length) return data; }catch(e){} }
+    }
+    // seed inicial
+    var tue=addDaysISO(weekStart,1), wed=addDaysISO(weekStart,2);
+    var seed=[
+      {id:String(Math.random()).slice(2,9),client:'Construcione',title:'Post Setembro Amarelo',status:'parado',day:tue},
+      {id:String(Math.random()).slice(2,9),client:'Construcione',title:'Banner Setembro Amarelo',status:'parado',day:tue},
+      {id:String(Math.random()).slice(2,9),client:'Construcione',title:'Layout Site',status:'parado',day:tue},
+      {id:String(Math.random()).slice(2,9),client:'Construcione',title:'Enviar texturas clara e escura',status:'parado',day:tue},
+      {id:String(Math.random()).slice(2,9),client:'Matec',title:'Logo Amarelo p/ redes sociais',status:'parado',day:tue},
+      {id:String(Math.random()).slice(2,9),client:'Matec',title:'Mascote Gente e Gestão',status:'parado',day:tue},
+      {id:String(Math.random()).slice(2,9),client:'Vertticom',title:'Arrumar página de empreendimento',status:'parado',day:tue},
+      {id:String(Math.random()).slice(2,9),client:'Construcione',title:'Pesquisar Ideia de Layout',status:'parado',day:wed},
+      {id:String(Math.random()).slice(2,9),client:'Construcione',title:'Start no desenho da Home',status:'parado',day:wed},
+      {id:String(Math.random()).slice(2,9),client:'Construcione',title:'Desenvolver home',status:'parado',day:wed},
+      {id:String(Math.random()).slice(2,9),client:'Matec',title:'Post do Dia',status:'parado',day:wed},
+      {id:String(Math.random()).slice(2,9),client:'Matec',title:'Terminar Mascote',status:'parado',day:wed},
+      {id:String(Math.random()).slice(2,9),client:'Vertticom',title:'Ajustar empreendimento',status:'parado',day:wed}
+    ];
+    if(storageOK()){ try{ localStorage.setItem(key(), JSON.stringify(seed)); }catch(e){} }
+    return seed;
+  }
+  function save(){ if(storageOK()){ try{ localStorage.setItem(key(), JSON.stringify(tasks)); }catch(e){} } }
 
-  document.getElementById("prevWeek").addEventListener("click",()=>gotoWeek(addDaysISO(weekStart,-7)))
-  document.getElementById("nextWeek").addEventListener("click",()=>gotoWeek(addDaysISO(weekStart,7)))
-  document.getElementById("weekPicker").addEventListener("change",(e)=>{if(!e.target.value) return; gotoWeek(toISO(mondayOf(fromISO(e.target.value))))})
+  // ---- Elementos ----
+  var progressFill=document.getElementById('progressFill');
+  var doneCount=document.getElementById('doneCount');
+  var totalCount=document.getElementById('totalCount');
+  var tabs=document.getElementById('tabs');
+  var listWrap=document.getElementById('listWrap');
 
-  document.getElementById("qaAdd").addEventListener("click",()=>{
-    const client=document.getElementById("qaClient").value;
-    const title=(document.getElementById("qaTitle").value||"").trim();
-    const status=document.getElementById("qaStatus").value;
-    const day=document.getElementById("qaDay").value;
-    if(!title){alert("Escreva um título.");return}
-    tasks.push({id:uid(), client, title, status, day}); save();
-    document.getElementById("qaTitle").value=""; render();
-  })
+  // ---- Navegação semana ----
+  document.getElementById('prevWeek').addEventListener('click', function(){ gotoWeek(addDaysISO(weekStart,-7)); });
+  document.getElementById('nextWeek').addEventListener('click', function(){ gotoWeek(addDaysISO(weekStart,7)); });
+  document.getElementById('weekPicker').addEventListener('change', function(e){
+    if(!e.target.value) return;
+    var d=fromISO(e.target.value);
+    gotoWeek(toISO(mondayOf(d)));
+  });
 
-  document.getElementById("hideDone").addEventListener("change", render)
+  // ---- Quick add ----
+  document.getElementById('qaAdd').addEventListener('click', function(){
+    var client=document.getElementById('qaClient').value;
+    var title=(document.getElementById('qaTitle').value||'').trim();
+    var status=document.getElementById('qaStatus').value;
+    var day=document.getElementById('qaDay').value;
+    if(!title){ alert('Escreva um título.'); return; }
+    tasks.push({id:String(Math.random()).slice(2,9), client:client, title:title, status:status, day:day});
+    save();
+    document.getElementById('qaTitle').value='';
+    render();
+  });
 
+  document.getElementById('hideDone').addEventListener('change', render);
+
+  // ---- Render ----
   function render(){
-    tabs.innerHTML="";
-    const tabAll=document.createElement("button"); tabAll.className="tab"; tabAll.textContent="Semana"; tabAll.setAttribute("aria-selected", String(activeTab==="semana")); tabAll.onclick=()=>{activeTab="semana"; render()}; tabs.appendChild(tabAll)
-    const days=[]; for(let i=0;i<7;i++){const iso=addDaysISO(weekStart,i); days.push(iso); const d=fromISO(iso); const b=document.createElement("button"); b.className="tab"; b.textContent=d.toLocaleDateString("pt-BR",{weekday:"short"})+" "+pad(d.getDate())+"/"+pad(d.getMonth()+1); b.setAttribute("aria-selected", String(activeTab===iso)); b.onclick=()=>{activeTab=iso; render()}; tabs.appendChild(b)}
+    // abas
+    tabs.innerHTML='';
+    var tabAll=document.createElement('button');
+    tabAll.className='tab';
+    tabAll.textContent='Semana';
+    tabAll.setAttribute('aria-selected', String(activeTab==='semana'));
+    tabAll.onclick=function(){ activeTab='semana'; render(); };
+    tabs.appendChild(tabAll);
 
-    const qaDay=document.getElementById("qaDay"); qaDay.innerHTML=""; days.forEach(iso=>{const o=document.createElement("option"); const d=fromISO(iso); o.value=iso; o.textContent=d.toLocaleDateString("pt-BR",{weekday:"short", day:"2-digit", month:"2-digit"}); qaDay.appendChild(o)})
-    qaDay.value = activeTab==="semana"? days[0] : activeTab;
+    var days=[], i;
+    for(i=0;i<7;i++){
+      var iso=addDaysISO(weekStart,i);
+      days.push(iso);
+      var d=fromISO(iso);
+      var b=document.createElement('button');
+      b.className='tab';
+      var wd=weekNamesShort[d.getDay()];
+      b.textContent=wd+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1);
+      b.setAttribute('aria-selected', String(activeTab===iso));
+      b.onclick=(function(val){ return function(){ activeTab=val; render(); }; })(iso);
+      tabs.appendChild(b);
+    }
 
-    const hideDone=document.getElementById("hideDone").checked;
-    listWrap.innerHTML="";
-    const makeCard=(t)=>{
-      const row=document.createElement("div"); row.className="card";
-      const check=document.createElement("button"); check.className="check"; check.dataset.checked=String(t.status==="feito"); check.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 12.5l4 3.5 8-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      check.onclick=()=>{t.status=(t.status==="feito"?"parado":"feito"); save(); render()}; row.appendChild(check);
-      const main=document.createElement("div"); const title=document.createElement("div"); title.className="taskTitle"; title.textContent=t.title;
-      const pill=document.createElement("span"); pill.className="pill "+(PILL_CLASS[t.client]||""); pill.textContent=t.client;
-      main.appendChild(title); main.appendChild(pill); row.appendChild(main);
-      const status=document.createElement("button"); status.className="statusBtn"; const dot=document.createElement("span"); dot.className="dotStatus "+t.status; status.appendChild(dot); const lab=document.createElement("span"); lab.textContent=" "+(LABEL[t.status]||t.status); status.appendChild(lab); status.onclick=()=>{const i=STATUS.indexOf(t.status); t.status=STATUS[(i+1)%STATUS.length]; save(); render()}; row.appendChild(status);
-      const del=document.createElement("button"); del.className="del"; del.title="Excluir"; del.innerHTML='🗑️'; del.onclick=()=>{ if(confirm('Excluir esta tarefa?')){ tasks = tasks.filter(x=>x.id!==t.id); save(); render(); } }; row.appendChild(del);
+    // select do dia
+    var qaDay=document.getElementById('qaDay');
+    qaDay.innerHTML='';
+    for(i=0;i<days.length;i++){
+      var o=document.createElement('option');
+      var dd=fromISO(days[i]);
+      o.value=days[i];
+      o.textContent=weekNamesShort[dd.getDay()]+' '+pad(dd.getDate())+'/'+pad(dd.getMonth()+1);
+      qaDay.appendChild(o);
+    }
+    qaDay.value = activeTab==='semana' ? days[0] : activeTab;
+
+    var hideDone=document.getElementById('hideDone').checked;
+
+    // listas
+    listWrap.innerHTML='';
+    function makeCard(t){
+      var row=document.createElement('div'); row.className='card';
+
+      var check=document.createElement('button'); check.className='check';
+      if(t.status==='feito'){ check.setAttribute('data-checked','true'); }
+      check.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 12.5l4 3.5 8-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      check.onclick=function(){ t.status=(t.status==='feito'?'parado':'feito'); save(); render(); };
+      row.appendChild(check);
+
+      var main=document.createElement('div');
+      var title=document.createElement('div'); title.className='taskTitle'; title.textContent=t.title;
+      var pill=document.createElement('span'); pill.className='pill '+(PILL_CLASS[t.client]||''); pill.textContent=t.client;
+      main.appendChild(title); main.appendChild(pill);
+      row.appendChild(main);
+
+      var status=document.createElement('button'); status.className='statusBtn';
+      var dot=document.createElement('span'); dot.className='dotStatus '+t.status;
+      var lab=document.createElement('span'); lab.textContent=' '+(LABEL[t.status]||t.status);
+      status.appendChild(dot); status.appendChild(lab);
+      status.onclick=function(){
+        var idx=0, j;
+        for(j=0;j<STATUS.length;j++){ if(STATUS[j]===t.status){ idx=j; break; } }
+        t.status = STATUS[(idx+1)%STATUS.length];
+        save(); render();
+      };
+      row.appendChild(status);
+
+      var del=document.createElement('button'); del.className='del'; del.title='Excluir'; del.innerHTML='🗑️';
+      del.onclick=function(){ if(confirm('Excluir esta tarefa?')){ var k, arr=[]; for(k=0;k<tasks.length;k++){ if(tasks[k].id!==t.id) arr.push(tasks[k]); } tasks=arr; save(); render(); } };
+      row.appendChild(del);
+
       return row;
     }
 
     function groupFor(dayISO){
-      const items = tasks.filter(t=>t.day===dayISO && (!hideDone || t.status!=="feito"));
-      const dayDiv=document.createElement("div");
-      const d=fromISO(dayISO); const h=document.createElement("div"); h.className="dayHeader"; h.innerHTML = `<div>${d.toLocaleDateString('pt-BR',{weekday:'long'})} ${pad(d.getDate())}/${pad(d.getMonth()+1)}</div>`; dayDiv.appendChild(h);
-      const list=document.createElement("div"); list.className="list";
-      if(items.length===0){const empty=document.createElement("div"); empty.className="meta"; empty.textContent="Sem tarefas."; list.appendChild(empty)}
-      else { items.forEach(t=> list.appendChild(makeCard(t))) }
+      var items=[], k;
+      for(k=0;k<tasks.length;k++){
+        if(tasks[k].day===dayISO && (!hideDone || tasks[k].status!=='feito')) items.push(tasks[k]);
+      }
+      var dayDiv=document.createElement('div');
+      var d=fromISO(dayISO);
+      var h=document.createElement('div'); h.className='dayHeader';
+      h.innerHTML='<div>'+weekNamesLong[d.getDay()]+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+'</div>';
+      dayDiv.appendChild(h);
+      var list=document.createElement('div'); list.className='list';
+      if(items.length===0){
+        var empty=document.createElement('div'); empty.className='meta'; empty.textContent='Sem tarefas.'; list.appendChild(empty);
+      } else {
+        for(k=0;k<items.length;k++){ list.appendChild(makeCard(items[k])); }
+      }
       dayDiv.appendChild(list); return dayDiv;
     }
 
-    const days=[addDaysISO(weekStart,0),addDaysISO(weekStart,1),addDaysISO(weekStart,2),addDaysISO(weekStart,3),addDaysISO(weekStart,4),addDaysISO(weekStart,5),addDaysISO(weekStart,6)];
-    if(activeTab==="semana"){ days.forEach(iso=> listWrap.appendChild(groupFor(iso)) ) }
-    else { listWrap.appendChild(groupFor(activeTab)) }
+    if(activeTab==='semana'){ for(i=0;i<days.length;i++){ listWrap.appendChild(groupFor(days[i])); } }
+    else { listWrap.appendChild(groupFor(activeTab)); }
 
-    const total=tasks.length; const done=tasks.filter(t=>t.status==="feito").length;
-    totalCount.textContent=total; doneCount.textContent=done; document.getElementById("progressFill").style.width=(total? Math.round(100*done/total):0)+"%";
+    var total=tasks.length, done=0;
+    for(i=0;i<tasks.length;i++){ if(tasks[i].status==='feito') done++; }
+    totalCount.textContent=String(total); doneCount.textContent=String(done);
+    progressFill.style.width=(total? Math.round(100*done/total):0)+'%';
   }
 
-  function gotoWeek(startISO){ weekStart=startISO; tasks=load(); document.getElementById('weekPicker').value=weekStart; activeTab='semana'; render() }
-  gotoWeek(toISO(mondayOf(new Date())));
+  function gotoWeek(startISO){
+    weekStart=startISO;
+    tasks=load();
+    document.getElementById('weekPicker').value=weekStart;
+    activeTab='semana';
+    render();
+  }
+
+  // init
+  try{
+    gotoWeek(toISO(mondayOf(new Date())));
+  }catch(e){
+    var box=document.getElementById('err');
+    if(box){ box.style.display='block'; box.textContent='Falha ao iniciar: '+(e.message||e); }
+  }
 })();
 </script>
 </body>
