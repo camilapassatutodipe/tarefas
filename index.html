@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Painel de Tarefas Semanais — Agência Dipe (versão simples)</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1b1b18; --accent:#ff573b; --paper:#f5f4ea; --card:#ffffff; --muted:#5b5b56; --border:#e5e3da;
+    --ok:#1fbf74; --warn:#e53935; --work:#2563eb; --idle:#9ca3af;
+    --c-construcione:#374151; --c-matec:#02b8b5; --c-vertticom:#b4533a; --c-lrocha:#c62828;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; font:16px/1.6 Roboto,system-ui,-apple-system,Segoe UI,Helvetica,Arial; color:var(--ink); background:var(--paper)}
+  .container{max-width:960px; margin:20px auto; padding:0 16px}
+  header{position:sticky; top:0; z-index:5; background:linear-gradient(180deg, #fff, #fff7f3); border-bottom:1px solid var(--border)}
+  .brand{display:flex; align-items:center; gap:12px; padding:14px 0}
+  .dot{width:10px; height:10px; border-radius:50%; background:var(--accent)}
+  h1{margin:0; font-size:20px; font-weight:900}
+  .progress{margin-left:auto; display:flex; align-items:center; gap:10px}
+  .track{width:220px; height:10px; border:1px solid var(--border); background:#fff; border-radius:999px; overflow:hidden}
+  .fill{height:100%; width:0%; background:linear-gradient(90deg, var(--accent), #ff9b3b, #ffd43b)}
+  .stats{font-size:13px; color:var(--muted)}
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:0 0 12px}
+  .btn,.select,.input{border:1px solid var(--border); background:#fff; color:var(--ink); border-radius:10px; padding:8px 12px}
+  .btn{cursor:pointer; font-weight:900}
+  .seg{display:flex; border:1px solid var(--border); border-radius:10px; overflow:hidden}
+  .seg .btn{border:none; border-right:1px solid var(--border)}
+  .seg .btn:last-child{border-right:none}
+  .tabs{display:flex; gap:6px; flex-wrap:wrap}
+  .tab{padding:6px 10px; border:1px dashed var(--border); background:#fff; border-radius:999px; font-weight:900; cursor:pointer}
+  .tab[aria-selected="true"]{border-style:solid; border-color:var(--accent); background:#fff8f2}
+  .quickAdd{display:grid; grid-template-columns:1fr auto; gap:8px; margin:12px 0}
+  .quickAdd .row{display:flex; gap:8px; flex-wrap:wrap}
+  .dayHeader{display:flex; justify-content:space-between; align-items:center; margin:16px 0 8px; font-weight:900; color:#3b3b36}
+  .list{display:flex; flex-direction:column; gap:8px}
+  .card{display:grid; grid-template-columns:auto 1fr auto auto; gap:10px; align-items:center; padding:10px 12px; border:1px solid var(--border); background:var(--card); border-radius:14px; box-shadow:0 6px 14px rgba(0,0,0,.06)}
+  .check{width:22px; height:22px; border:2px solid #d6d1c4; border-radius:8px; display:grid; place-items:center; background:#fff; cursor:pointer}
+  .check[data-checked="true"]{background:#fff5f1; border-color:#ff9b7f}
+  .taskTitle{font-weight:900}
+  .pill{border:1px solid var(--border); padding:4px 8px; border-radius:999px; font-size:12px; font-weight:900; background:#fff}
+  .pill.c-construcione{color:var(--c-construcione); border-color:var(--c-construcione)}
+  .pill.c-matec{color:var(--c-matec); border-color:var(--c-matec)}
+  .pill.c-vertticom{color:var(--c-vertticom); border-color:var(--c-vertticom)}
+  .pill.c-lrocha{color:var(--c-lrocha); border-color:var(--c-lrocha)}
+  .meta{font-size:12px; color:var(--muted)}
+  .statusBtn{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--border); border-radius:999px; background:#fff; cursor:pointer; font-weight:900}
+  .dotStatus{width:10px; height:10px; border-radius:50%}
+  .dotStatus.parado{background:var(--idle)} .dotStatus.em_producao{background:var(--work)} .dotStatus.atrasado{background:var(--warn)} .dotStatus.feito{background:var(--ok)}
+  .del{border:1px solid var(--border); border-radius:8px; background:#fff; width:34px; height:34px; display:grid; place-items:center; cursor:pointer}
+  .help{margin-top:14px; font-size:12px; color:var(--muted)}
+</style>
+</head>
+<body>
+  <header>
+    <div class="container brand">
+      <div class="dot"></div>
+      <h1>Painel de Tarefas Semanais — Agência Dipe</h1>
+      <div class="progress">
+        <div class="stats"><span id="doneCount">0</span>/<span id="totalCount">0</span></div>
+        <div class="track"><div class="fill" id="progressFill"></div></div>
+      </div>
+    </div>
+    <div class="container toolbar">
+      <div class="seg">
+        <button class="btn" id="prevWeek">◀</button>
+        <input class="input" type="date" id="weekPicker" aria-label="Escolher data" />
+        <button class="btn" id="nextWeek">▶</button>
+      </div>
+      <div class="tabs" id="tabs" role="tablist" aria-label="Dias da semana" style="margin-left:6px"></div>
+      <div style="flex:1"></div>
+      <label style="display:flex; align-items:center; gap:6px"><input type="checkbox" id="hideDone"/> Ocultar concluídas</label>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="quickAdd">
+      <div class="row">
+        <select class="select" id="qaClient" aria-label="Cliente">
+          <option>Construcione</option><option>Matec</option><option>Vertticom</option><option>LRocha</option>
+        </select>
+        <input class="input" id="qaTitle" placeholder="Nova tarefa..." aria-label="Título da tarefa"/>
+        <select class="select" id="qaStatus" aria-label="Status">
+          <option value="parado">Parado</option><option value="em_producao">Em produção</option><option value="atrasado">Atrasado</option><option value="feito">Feito</option>
+        </select>
+        <select class="select" id="qaDay" aria-label="Dia"></select>
+      </div>
+      <div><button class="btn" id="qaAdd">Adicionar</button></div>
+    </section>
+
+    <div id="listWrap"></div>
+    <p class="help">Dica: clique no status para alternar (Parado → Em produção → Atrasado → Feito) e use o check ✅ para concluir.</p>
+  </main>
+
+<script>
+(function(){
+  function pad(n){return (n<10?"0":"")+n}
+  function toISO(d){d.setHours(0,0,0,0);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+  function fromISO(s){const [y,m,dd]=s.split("-").map(Number);const d=new Date(y,m-1,dd);d.setHours(0,0,0,0);return d}
+  function mondayOf(d){const day=d.getDay();const diff=(day===0?-6:1-day);const nd=new Date(d);nd.setDate(d.getDate()+diff);nd.setHours(0,0,0,0);return nd}
+  function addDaysISO(iso,days){const d=fromISO(iso);d.setDate(d.getDate()+days);return toISO(d)}
+  function uid(){return Math.random().toString(36).slice(2,9)}
+
+  const STATUS=["parado","em_producao","atrasado","feito"];
+  const LABEL={parado:"Parado", em_producao:"Em produção", atrasado:"Atrasado", feito:"Feito"};
+  const PILL_CLASS={Construcione:"c-construcione", Matec:"c-matec", Vertticom:"c-vertticom", LRocha:"c-lrocha"};
+
+  let weekStart = toISO(mondayOf(new Date()));
+  let tasks=[]; let activeTab="semana";
+  function key(){return "dipe_simple_week_"+weekStart}
+  function load(){
+    const raw=localStorage.getItem(key());
+    if(raw){try{const data=JSON.parse(raw); if(Array.isArray(data)&&data.length) return data;}catch{}}
+    const tue=addDaysISO(weekStart,1), wed=addDaysISO(weekStart,2);
+    const seed=[
+      {id:uid(),client:"Construcione",title:"Post Setembro Amarelo",status:"parado",day:tue},
+      {id:uid(),client:"Construcione",title:"Banner Setembro Amarelo",status:"parado",day:tue},
+      {id:uid(),client:"Construcione",title:"Layout Site",status:"parado",day:tue},
+      {id:uid(),client:"Construcione",title:"Enviar texturas clara e escura",status:"parado",day:tue},
+      {id:uid(),client:"Matec",title:"Logo Amarelo p/ redes sociais",status:"parado",day:tue},
+      {id:uid(),client:"Matec",title:"Mascote Gente e Gestão",status:"parado",day:tue},
+      {id:uid(),client:"Vertticom",title:"Arrumar página de empreendimento",status:"parado",day:tue},
+      {id:uid(),client:"Construcione",title:"Pesquisar Ideia de Layout",status:"parado",day:wed},
+      {id:uid(),client:"Construcione",title:"Start no desenho da Home",status:"parado",day:wed},
+      {id:uid(),client:"Construcione",title:"Desenvolver home",status:"parado",day:wed},
+      {id:uid(),client:"Matec",title:"Post do Dia",status:"parado",day:wed},
+      {id:uid(),client:"Matec",title:"Terminar Mascote",status:"parado",day:wed},
+      {id:uid(),client:"Vertticom",title:"Ajustar empreendimento",status:"parado",day:wed}
+    ];
+    localStorage.setItem(key(), JSON.stringify(seed)); return seed;
+  }
+  function save(){localStorage.setItem(key(), JSON.stringify(tasks))}
+  const progressFill=document.getElementById("progressFill");
+  const doneCount=document.getElementById("doneCount");
+  const totalCount=document.getElementById("totalCount");
+  const tabs=document.getElementById("tabs");
+  const listWrap=document.getElementById("listWrap");
+
+  document.getElementById("prevWeek").addEventListener("click",()=>gotoWeek(addDaysISO(weekStart,-7)))
+  document.getElementById("nextWeek").addEventListener("click",()=>gotoWeek(addDaysISO(weekStart,7)))
+  document.getElementById("weekPicker").addEventListener("change",(e)=>{if(!e.target.value) return; gotoWeek(toISO(mondayOf(fromISO(e.target.value))))})
+
+  document.getElementById("qaAdd").addEventListener("click",()=>{
+    const client=document.getElementById("qaClient").value;
+    const title=(document.getElementById("qaTitle").value||"").trim();
+    const status=document.getElementById("qaStatus").value;
+    const day=document.getElementById("qaDay").value;
+    if(!title){alert("Escreva um título.");return}
+    tasks.push({id:uid(), client, title, status, day}); save();
+    document.getElementById("qaTitle").value=""; render();
+  })
+
+  document.getElementById("hideDone").addEventListener("change", render)
+
+  function render(){
+    tabs.innerHTML="";
+    const tabAll=document.createElement("button"); tabAll.className="tab"; tabAll.textContent="Semana"; tabAll.setAttribute("aria-selected", String(activeTab==="semana")); tabAll.onclick=()=>{activeTab="semana"; render()}; tabs.appendChild(tabAll)
+    const days=[]; for(let i=0;i<7;i++){const iso=addDaysISO(weekStart,i); days.push(iso); const d=fromISO(iso); const b=document.createElement("button"); b.className="tab"; b.textContent=d.toLocaleDateString("pt-BR",{weekday:"short"})+" "+pad(d.getDate())+"/"+pad(d.getMonth()+1); b.setAttribute("aria-selected", String(activeTab===iso)); b.onclick=()=>{activeTab=iso; render()}; tabs.appendChild(b)}
+
+    const qaDay=document.getElementById("qaDay"); qaDay.innerHTML=""; days.forEach(iso=>{const o=document.createElement("option"); const d=fromISO(iso); o.value=iso; o.textContent=d.toLocaleDateString("pt-BR",{weekday:"short", day:"2-digit", month:"2-digit"}); qaDay.appendChild(o)})
+    qaDay.value = activeTab==="semana"? days[0] : activeTab;
+
+    const hideDone=document.getElementById("hideDone").checked;
+    listWrap.innerHTML="";
+    const makeCard=(t)=>{
+      const row=document.createElement("div"); row.className="card";
+      const check=document.createElement("button"); check.className="check"; check.dataset.checked=String(t.status==="feito"); check.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 12.5l4 3.5 8-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      check.onclick=()=>{t.status=(t.status==="feito"?"parado":"feito"); save(); render()}; row.appendChild(check);
+      const main=document.createElement("div"); const title=document.createElement("div"); title.className="taskTitle"; title.textContent=t.title;
+      const pill=document.createElement("span"); pill.className="pill "+(PILL_CLASS[t.client]||""); pill.textContent=t.client;
+      main.appendChild(title); main.appendChild(pill); row.appendChild(main);
+      const status=document.createElement("button"); status.className="statusBtn"; const dot=document.createElement("span"); dot.className="dotStatus "+t.status; status.appendChild(dot); const lab=document.createElement("span"); lab.textContent=" "+(LABEL[t.status]||t.status); status.appendChild(lab); status.onclick=()=>{const i=STATUS.indexOf(t.status); t.status=STATUS[(i+1)%STATUS.length]; save(); render()}; row.appendChild(status);
+      const del=document.createElement("button"); del.className="del"; del.title="Excluir"; del.innerHTML='🗑️'; del.onclick=()=>{ if(confirm('Excluir esta tarefa?')){ tasks = tasks.filter(x=>x.id!==t.id); save(); render(); } }; row.appendChild(del);
+      return row;
+    }
+
+    function groupFor(dayISO){
+      const items = tasks.filter(t=>t.day===dayISO && (!hideDone || t.status!=="feito"));
+      const dayDiv=document.createElement("div");
+      const d=fromISO(dayISO); const h=document.createElement("div"); h.className="dayHeader"; h.innerHTML = `<div>${d.toLocaleDateString('pt-BR',{weekday:'long'})} ${pad(d.getDate())}/${pad(d.getMonth()+1)}</div>`; dayDiv.appendChild(h);
+      const list=document.createElement("div"); list.className="list";
+      if(items.length===0){const empty=document.createElement("div"); empty.className="meta"; empty.textContent="Sem tarefas."; list.appendChild(empty)}
+      else { items.forEach(t=> list.appendChild(makeCard(t))) }
+      dayDiv.appendChild(list); return dayDiv;
+    }
+
+    const days=[addDaysISO(weekStart,0),addDaysISO(weekStart,1),addDaysISO(weekStart,2),addDaysISO(weekStart,3),addDaysISO(weekStart,4),addDaysISO(weekStart,5),addDaysISO(weekStart,6)];
+    if(activeTab==="semana"){ days.forEach(iso=> listWrap.appendChild(groupFor(iso)) ) }
+    else { listWrap.appendChild(groupFor(activeTab)) }
+
+    const total=tasks.length; const done=tasks.filter(t=>t.status==="feito").length;
+    totalCount.textContent=total; doneCount.textContent=done; document.getElementById("progressFill").style.width=(total? Math.round(100*done/total):0)+"%";
+  }
+
+  function gotoWeek(startISO){ weekStart=startISO; tasks=load(); document.getElementById('weekPicker').value=weekStart; activeTab='semana'; render() }
+  gotoWeek(toISO(mondayOf(new Date())));
+})();
+</script>
+</body>
+</html>
