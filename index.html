@@ -3,398 +3,220 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Painel — Agência Dipe (Completo)</title>
+<title>Painel de Tarefas Semanais — Agência Dipe (versão simples)</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#1b1b18; --muted:#6b6b65; --paper:#f5f4ea; --card:#ffffff; --border:#e7e4d9;
-    --accent:#ff573b; --ok:#1fbf74; --warn:#e53935; --work:#2563eb; --idle:#9ca3af;
+    --ink:#1b1b18; --accent:#ff573b; --paper:#f5f4ea; --card:#ffffff; --muted:#5b5b56; --border:#e5e3da;
+    --ok:#1fbf74; --warn:#e53935; --work:#2563eb; --idle:#9ca3af;
     --c-construcione:#374151; --c-matec:#02b8b5; --c-vertticom:#b4533a; --c-lrocha:#c62828;
   }
   *{box-sizing:border-box}
-  body{margin:0; font:15px/1.6 Roboto,system-ui,-apple-system,Segoe UI,Helvetica,Arial; color:var(--ink); background:var(--paper)}
-  .wrap{max-width:1100px; margin:24px auto; padding:0 16px}
-  h1{margin:0 0 6px; font-size:22px; font-weight:900}
-  .sub{color:var(--muted); margin-bottom:12px}
-  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  body{margin:0; font:16px/1.6 Roboto,system-ui,-apple-system,Segoe UI,Helvetica,Arial; color:var(--ink); background:var(--paper)}
+  .container{max-width:960px; margin:20px auto; padding:0 16px}
+  header{position:sticky; top:0; z-index:5; background:linear-gradient(180deg, #fff, #fff7f3); border-bottom:1px solid var(--border)}
+  .brand{display:flex; align-items:center; gap:12px; padding:14px 0}
+  .dot{width:10px; height:10px; border-radius:50%; background:var(--accent)}
+  h1{margin:0; font-size:20px; font-weight:900}
+  .progress{margin-left:auto; display:flex; align-items:center; gap:10px}
+  .track{width:220px; height:10px; border:1px solid var(--border); background:#fff; border-radius:999px; overflow:hidden}
+  .fill{height:100%; width:0%; background:linear-gradient(90deg, var(--accent), #ff9b3b, #ffd43b)}
 
-  .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; background:#fff; padding:10px; border:1px solid var(--border); border-radius:12px}
-  .input{border:1px solid var(--border); background:#fff; border-radius:10px; padding:10px 12px; min-width:260px}
-  .select,.btn{border:1px solid var(--border); background:#fff; border-radius:10px; padding:10px 12px; cursor:pointer}
-  .btn{font-weight:900}
-  .btn.ghost{background:#fffdf8}
-  .chip{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); background:#fff; border-radius:999px; padding:4px 10px; font-weight:900}
-  .chip.dot:before{content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--accent)}
-  .chip.c-construcione{color:var(--c-construcione); border-color:var(--c-construcione)}
-  .chip.c-matec{color:var(--c-matec); border-color:var(--c-matec)}
-  .chip.c-vertticom{color:var(--c-vertticom); border-color:var(--c-vertticom)}
-  .chip.c-lrocha{color:var(--c-lrocha); border-color:var(--c-lrocha)}
-  .chip.active{background:#fff8f2; border-color:var(--accent); color:var(--accent)}
+  .stats{font-size:13px; color:var(--muted)}
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:0 0 12px}
+  .btn,.select,.input{border:1px solid var(--border); background:#fff; color:var(--ink); border-radius:10px; padding:8px 12px}
+  .btn{cursor:pointer; font-weight:900}
+  .seg{display:flex; border:1px solid var(--border); border-radius:10px; overflow:hidden}
+  .seg .btn{border:none; border-right:1px solid var(--border)}
+  .seg .btn:last-child{border-right:none}
 
-  .weekbar{display:flex; align-items:center; gap:8px; margin:16px 0 10px}
-  .range{font-weight:900}
-  .btn.icon{padding:6px 10px}
+  .tabs{display:flex; gap:6px; flex-wrap:wrap}
+  .tab{padding:6px 10px; border:1px dashed var(--border); background:#fff; border-radius:999px; font-weight:900; cursor:pointer}
+  .tab[aria-selected="true"]{border-style:solid; border-color:var(--accent); background:#fff8f2}
 
-  .card{background:#fff; border:1px solid var(--border); border-radius:12px; padding:12px}
-  .sectionTitle{display:flex; align-items:center; gap:8px; font-weight:900; margin:10px 0}
-  .sectionTitle .icon{font-size:18px}
+  .quickAdd{display:grid; grid-template-columns:1fr auto; gap:8px; margin:12px 0}
+  .quickAdd .row{display:flex; gap:8px; flex-wrap:wrap}
 
-  /* Agenda (lista com bullets) */
-  .agenda h3{margin:14px 0 6px; font-size:14px; color:#3b3b36}
-  .agenda ul{margin:0 0 8px 18px}
-  .agenda li{margin:4px 0}
-  .tag{display:inline-block; font-size:12px; border:1px solid var(--border); padding:0 8px; border-radius:999px; margin-right:6px}
-  .tag.c-construcione{color:var(--c-construcione); border-color:var(--c-construcione)}
-  .tag.c-matec{color:var(--c-matec); border-color:var(--c-matec)}
-  .tag.c-vertticom{color:var(--c-vertticom); border-color:var(--c-vertticom)}
-  .tag.c-lrocha{color:var(--c-lrocha); border-color:var(--c-lrocha)}
-  .st{display:inline-flex; align-items:center; gap:6px; border:1px dashed var(--border); padding:0 8px; border-radius:999px; font-size:12px; margin-left:6px; cursor:pointer}
-  .dot{width:8px; height:8px; border-radius:50%; background:var(--idle)}
-  .st.parado .dot{background:var(--idle)}
-  .st.em_producao .dot{background:var(--work)}
-  .st.atrasado .dot{background:var(--warn)}
-  .st.feito .dot{background:var(--ok)}
-  .done{opacity:.55; text-decoration:line-through}
-  .trash{margin-left:6px; cursor:pointer; opacity:.6}
-  .trash:hover{opacity:1}
+  .dayHeader{display:flex; justify-content:space-between; align-items:center; margin:16px 0 8px; font-weight:900; color:#3b3b36}
+  .list{display:flex; flex-direction:column; gap:8px}
+  .card{display:grid; grid-template-columns:auto 1fr auto auto; gap:10px; align-items:center; padding:10px 12px; border:1px solid var(--border); background:var(--card); border-radius:14px; box-shadow:0 6px 14px rgba(0,0,0,.06)}
+  .check{width:22px; height:22px; border:2px solid #d6d1c4; border-radius:8px; display:grid; place-items:center; background:#fff; cursor:pointer}
+  .check[data-checked="true"]{background:#fff5f1; border-color:#ff9b7f}
+  .taskTitle{font-weight:900}
+  .pill{border:1px solid var(--border); padding:4px 8px; border-radius:999px; font-size:12px; font-weight:900; background:#fff}
+  .pill.c-construcione{color:var(--c-construcione); border-color:var(--c-construcione)}
+  .pill.c-matec{color:var(--c-matec); border-color:var(--c-matec)}
+  .pill.c-vertticom{color:var(--c-vertticom); border-color:var(--c-vertticom)}
+  .pill.c-lrocha{color:var(--c-lrocha); border-color:var(--c-lrocha)}
+  .meta{font-size:12px; color:var(--muted)}
+  .statusBtn{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--border); border-radius:999px; background:#fff; cursor:pointer; font-weight:900}
+  .dotStatus{width:10px; height:10px; border-radius:50%}
+  .dotStatus.parado{background:var(--idle)} .dotStatus.em_producao{background:var(--work)} .dotStatus.atrasado{background:var(--warn)} .dotStatus.feito{background:var(--ok)}
+  .del{border:1px solid var(--border); border-radius:8px; background:#fff; width:34px; height:34px; display:grid; place-items:center; cursor:pointer}
 
-  /* Relatório por cliente */
-  table{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden}
-  thead th{position:sticky; top:0; background:#faf9f3; z-index:1}
-  th, td{border-bottom:1px solid var(--border); padding:10px 12px; text-align:left}
-  tbody tr:hover td{background:#fffdf8}
-  .right{text-align:right}
-  .clientsBar{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 12px}
-  .muted{color:var(--muted); font-size:13px}
-
-  /* Footer tips */
-  .help{margin:14px 0; color:var(--muted); font-size:12px}
-  .err{display:none; background:#fdecea; color:#b71c1c; border:1px solid #f5c6c6; padding:10px 12px; margin:10px auto; border-radius:8px}
+  .help{margin-top:14px; font-size:12px; color:var(--muted)}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Painel de Tarefas — Agência Dipe</h1>
-  <div class="sub">Busca, filtros, exportação, duplicar semana e estatísticas por cliente.</div>
-
-  <!-- Barra da semana -->
-  <div class="weekbar">
-    <button class="btn icon" id="prevW">◀</button>
-    <div class="range" id="weekRange">Semana</div>
-    <button class="btn icon" id="nextW">▶</button>
-    <input class="select" type="date" id="weekPick" />
-    <button class="btn ghost" id="dupWeek">Duplicar semana…</button>
-    <button class="btn ghost" id="clearWeek">Limpar semana</button>
-  </div>
-
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <input class="input" id="q" placeholder="Buscar por título/cliente..." />
-    <label class="chip dot"><input id="hideDone" type="checkbox" style="margin-right:6px" checked> Ocultar concluídas</label>
-    <select class="select" id="statusSel" aria-label="Status">
-      <option value="todas">Status: Todas</option>
-      <option value="parado">Parado</option>
-      <option value="em_producao">Em produção</option>
-      <option value="atrasado">Atrasado</option>
-      <option value="feito">Feito</option>
-    </select>
-    <button class="btn" id="csvBtn">Exportar CSV</button>
-    <button class="btn" id="jsonExp">Exportar JSON</button>
-    <label class="btn">
-      Importar JSON
-      <input type="file" id="jsonImp" accept="application/json" style="display:none">
-    </label>
-    <div style="flex:1"></div>
-    <!-- Adicionar tarefa rápida -->
-    <select class="select" id="qaClient">
-      <option>Construcione</option><option>Matec</option><option>Vertticom</option><option>LRocha</option>
-    </select>
-    <input class="input" id="qaTitle" placeholder="Nova tarefa..." style="min-width:220px">
-    <select class="select" id="qaStatus">
-      <option value="parado">Parado</option><option value="em_producao">Em produção</option><option value="atrasado">Atrasado</option><option value="feito">Feito</option>
-    </select>
-    <select class="select" id="qaDay"></select>
-    <button class="btn" id="qaAdd">Adicionar</button>
-  </div>
-
-  <!-- Agenda -->
-  <div class="card agenda" style="margin-top:12px">
-    <div class="sectionTitle"><span class="icon">🗓️</span> Agenda da semana</div>
-    <div id="agenda"></div>
-  </div>
-
-  <!-- Estatística por cliente -->
-  <div class="card" style="margin-top:14px">
-    <div class="sectionTitle"><span class="icon">📊</span> Por cliente</div>
-    <div class="clientsBar" id="clientsBar"></div>
-    <div class="muted">Clique no cliente para filtrar a lista acima.</div>
-    <div style="overflow:auto; margin-top:8px">
-      <table>
-        <thead><tr><th>Cliente</th><th class="right">Concluídas</th><th class="right">Total</th></tr></thead>
-        <tbody id="tblClients"></tbody>
-      </table>
+  <header>
+    <div class="container brand">
+      <div class="dot"></div>
+      <h1>Painel de Tarefas Semanais — Agência Dipe</h1>
+      <div class="progress">
+        <div class="stats"><span id="doneCount">0</span>/<span id="totalCount">0</span></div>
+        <div class="track"><div class="fill" id="progressFill"></div></div>
+      </div>
     </div>
-  </div>
+    <div class="container toolbar">
+      <div class="seg">
+        <button class="btn" id="prevWeek">◀</button>
+        <input class="input" type="date" id="weekPicker" aria-label="Escolher data" />
+        <button class="btn" id="nextWeek">▶</button>
+      </div>
+      <div class="tabs" id="tabs" role="tablist" aria-label="Dias da semana" style="margin-left:6px"></div>
+      <div style="flex:1"></div>
+      <label style="display:flex; align-items:center; gap:6px"><input type="checkbox" id="hideDone"/> Ocultar concluídas</label>
+    </div>
+  </header>
 
-  <div id="err" class="err"></div>
-  <p class="help">Dica: clique no “status” ao lado de cada tarefa para alternar (Parado → Em produção → Atrasado → Feito). Clique no texto para marcar/desmarcar concluída. Ícone 🗑️ apaga.</p>
-</div>
+  <main class="container">
+    <section class="quickAdd">
+      <div class="row">
+        <select class="select" id="qaClient" aria-label="Cliente">
+          <option>Construcione</option>
+          <option>Matec</option>
+          <option>Vertticom</option>
+          <option>LRocha</option>
+        </select>
+        <input class="input" id="qaTitle" placeholder="Nova tarefa..." aria-label="Título da tarefa"/>
+        <select class="select" id="qaStatus" aria-label="Status">
+          <option value="parado">Parado</option>
+          <option value="em_producao">Em produção</option>
+          <option value="atrasado">Atrasado</option>
+          <option value="feito">Feito</option>
+        </select>
+        <select class="select" id="qaDay" aria-label="Dia"></select>
+      </div>
+      <div>
+        <button class="btn" id="qaAdd">Adicionar</button>
+      </div>
+    </section>
+
+    <div id="listWrap"></div>
+
+    <p class="help">Dica: clique no status para alternar (Parado → Em produção → Atrasado → Feito) e use o check ✅ para concluir.</p>
+  </main>
 
 <script>
 (function(){
-  function showErr(msg){ var e=document.getElementById('err'); e.style.display='block'; e.textContent=msg; }
-  window.addEventListener('error', function(e){ showErr('Erro de script: ' + (e.message || e.toString())); });
+  // Helpers de data
+  function pad(n){return (n<10?"0":"")+n}
+  function toISO(d){d.setHours(0,0,0,0);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+  function fromISO(s){const [y,m,dd]=s.split("-").map(Number);const d=new Date(y,m-1,dd);d.setHours(0,0,0,0);return d}
+  function mondayOf(d){const day=d.getDay();const diff=(day===0?-6:1-day);const nd=new Date(d);nd.setDate(d.getDate()+diff);nd.setHours(0,0,0,0);return nd}
+  function addDaysISO(iso,days){const d=fromISO(iso);d.setDate(d.getDate()+days);return toISO(d)}
+  function uid(){return Math.random().toString(36).slice(2,9)}
 
-  function pad(n){return (n<10?'0':'')+n;}
-  function toISO(d){d.setHours(0,0,0,0);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
-  function fromISO(s){var p=s.split('-').map(function(x){return parseInt(x,10)});var d=new Date(p[0],p[1]-1,p[2]);d.setHours(0,0,0,0);return d;}
-  function mondayOf(d){var day=d.getDay();var diff=(day===0?-6:1-day);var nd=new Date(d);nd.setDate(d.getDate()+diff);nd.setHours(0,0,0,0);return nd;}
-  function addDaysISO(iso,days){var d=fromISO(iso);d.setDate(d.getDate()+days);return toISO(d);}
-  function brDay(d){ var w=['dom','seg','ter','qua','qui','sex','sáb']; return w[d.getDay()]+'. '+pad(d.getDate())+'/'+pad(d.getMonth()+1); }
+  const STATUS=["parado","em_producao","atrasado","feito"];
+  const LABEL={parado:"Parado", em_producao:"Em produção", atrasado:"Atrasado", feito:"Feito"};
+  const PILL_CLASS={Construcione:"c-construcione", Matec:"c-matec", Vertticom:"c-vertticom", LRocha:"c-lrocha"};
 
-  var STATUS=['parado','em_producao','atrasado','feito'];
-  var LABEL={parado:'Parado', em_producao:'Em produção', atrasado:'Atrasado', feito:'Feito'};
-  var PILL={'Construcione':'c-construcione','Matec':'c-matec','Vertticom':'c-vertticom','LRocha':'c-lrocha'};
+  let weekStart = toISO(mondayOf(new Date()));
+  let tasks=[]; // {id, client, title, status, day}
+  let activeTab="semana";
 
-  var weekStart = toISO(mondayOf(new Date()));
-  var tasks=[]; // {id, title, client, status, day, done}
-  var activeClient = 'todos';
-
-  function key(){return 'dipe_full_week_'+weekStart;}
-  function canLS(){try{localStorage.setItem('__t','1');localStorage.removeItem('__t');return true;}catch(e){return false;}}
+  function key(){return "dipe_simple_week_"+weekStart}
   function load(){
-    if(canLS()){
-      var raw=localStorage.getItem(key());
-      if(raw){try{var data=JSON.parse(raw); if(data&&data.length!=null) return data;}catch(e){}}
-    }
-    var tue=addDaysISO(weekStart,1), wed=addDaysISO(weekStart,2), thu=addDaysISO(weekStart,3);
-    var s=[
-      {id:'a1',client:'Matec',title:'Post Café Cultural Sto.Agostinho',status:'parado',day:tue,done:false},
-      {id:'a2',client:'Construcione',title:'Post Setembro Amarelo',status:'parado',day:tue,done:false},
-      {id:'a3',client:'Construcione',title:'Cartaz Setembro Amarelo',status:'parado',day:tue,done:false},
-      {id:'b1',client:'Matec',title:'Post do Dia | Enquete',status:'parado',day:wed,done:false},
-      {id:'b2',client:'Matec',title:'Terminar Mascote',status:'parado',day:wed,done:false},
-      {id:'b3',client:'Vertticom',title:'Arrumar página de empreendimento',status:'parado',day:wed,done:false},
-      {id:'b4',client:'Matec',title:'Post Voluntariado',status:'parado',day:wed,done:false},
-      {id:'c1',client:'Construcione',title:'Post TBT Danone',status:'parado',day:thu,done:false},
-      {id:'c2',client:'Construcione',title:'Arquitetura da Informação (Site)',status:'parado',day:thu,done:false},
-      {id:'c3',client:'Construcione',title:'Redação',status:'parado',day:thu,done:false}
+    const raw=localStorage.getItem(key());
+    if(raw){try{const data=JSON.parse(raw); if(Array.isArray(data)&&data.length) return data;}catch{}}
+    // seed para nunca ficar vazio
+    const tue=addDaysISO(weekStart,1), wed=addDaysISO(weekStart,2);
+    const seed=[
+      {id:uid(),client:"Construcione",title:"Post Setembro Amarelo",status:"parado",day:tue},
+      {id:uid(),client:"Construcione",title:"Banner Setembro Amarelo",status:"parado",day:tue},
+      {id:uid(),client:"Construcione",title:"Layout Site",status:"parado",day:tue},
+      {id:uid(),client:"Construcione",title:"Enviar texturas clara e escura",status:"parado",day:tue},
+      {id:uid(),client:"Matec",title:"Logo Amarelo p/ redes sociais",status:"parado",day:tue},
+      {id:uid(),client:"Matec",title:"Mascote Gente e Gestão",status:"parado",day:tue},
+      {id:uid(),client:"Vertticom",title:"Arrumar página de empreendimento",status:"parado",day:tue},
+      {id:uid(),client:"Construcione",title:"Pesquisar Ideia de Layout",status:"parado",day:wed},
+      {id:uid(),client:"Construcione",title:"Start no desenho da Home",status:"parado",day:wed},
+      {id:uid(),client:"Construcione",title:"Desenvolver home",status:"parado",day:wed},
+      {id:uid(),client:"Matec",title:"Post do Dia",status:"parado",day:wed},
+      {id:uid(),client:"Matec",title:"Terminar Mascote",status:"parado",day:wed},
+      {id:uid(),client:"Vertticom",title:"Ajustar empreendimento",status:"parado",day:wed}
     ];
-    if(canLS()){try{localStorage.setItem(key(), JSON.stringify(s));}catch(e){}}
-    return s;
+    localStorage.setItem(key(), JSON.stringify(seed));
+    return seed;
   }
-  function save(){ if(canLS()){ try{ localStorage.setItem(key(), JSON.stringify(tasks)); }catch(e){} } }
+  function save(){localStorage.setItem(key(), JSON.stringify(tasks))}
 
-  var weekRange=document.getElementById('weekRange');
-  var weekPick=document.getElementById('weekPick');
-  var agenda=document.getElementById('agenda');
-  var q=document.getElementById('q');
-  var hideDone=document.getElementById('hideDone');
-  var statusSel=document.getElementById('statusSel');
-  var csvBtn=document.getElementById('csvBtn');
-  var jsonExp=document.getElementById('jsonExp');
-  var jsonImp=document.getElementById('jsonImp');
-  var clientsBar=document.getElementById('clientsBar');
-  var tblClients=document.getElementById('tblClients');
+  const progressFill=document.getElementById("progressFill");
+  const doneCount=document.getElementById("doneCount");
+  const totalCount=document.getElementById("totalCount");
+  const tabs=document.getElementById("tabs");
+  const listWrap=document.getElementById("listWrap");
 
-  var qaClient=document.getElementById('qaClient');
-  var qaTitle=document.getElementById('qaTitle');
-  var qaStatus=document.getElementById('qaStatus');
-  var qaDay=document.getElementById('qaDay');
+  document.getElementById("prevWeek").addEventListener("click",()=>gotoWeek(addDaysISO(weekStart,-7)))
+  document.getElementById("nextWeek").addEventListener("click",()=>gotoWeek(addDaysISO(weekStart,7)))
+  document.getElementById("weekPicker").addEventListener("change",(e)=>{if(!e.target.value) return; gotoWeek(toISO(mondayOf(fromISO(e.target.value))))})
 
-  document.getElementById('prevW').addEventListener('click', function(){ gotoWeek(addDaysISO(weekStart,-7)); });
-  document.getElementById('nextW').addEventListener('click', function(){ gotoWeek(addDaysISO(weekStart, 7)); });
-  weekPick.addEventListener('change', function(e){ if(!e.target.value) return; gotoWeek(toISO(mondayOf(fromISO(e.target.value)))); });
+  document.getElementById("qaAdd").addEventListener("click",()=>{
+    const client=document.getElementById("qaClient").value;
+    const title=(document.getElementById("qaTitle").value||"").trim();
+    const status=document.getElementById("qaStatus").value;
+    const day=document.getElementById("qaDay").value;
+    if(!title){alert("Escreva um título.");return}
+    tasks.push({id:uid(), client, title, status, day}); save();
+    document.getElementById("qaTitle").value=""; render();
+  })
 
-  document.getElementById('dupWeek').addEventListener('click', function(){
-    var target = prompt('Duplicar esta semana para qual segunda-feira? (AAAA-MM-DD)');
-    if(!target) return;
-    if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(target)){ alert('Data inválida. Use AAAA-MM-DD.'); return; }
-    var monday = toISO(mondayOf(fromISO(target)));
-    var outKey = 'dipe_full_week_'+monday;
-    var out = [];
-    for(var i=0;i<tasks.length;i++){
-      var t=tasks[i];
-      var offset=(fromISO(t.day).getTime()-fromISO(weekStart).getTime())/(1000*3600*24);
-      var nt = {id:String(Math.random()).slice(2,9), client:t.client, title:t.title, status:t.status, day:addDaysISO(monday, offset), done:false};
-      out.push(nt);
-    }
-    try{ localStorage.setItem(outKey, JSON.stringify(out)); }catch(e){}
-    if(confirm('Semana duplicada! Ir para a semana '+monday+' agora?')){ gotoWeek(monday); }
-  });
+  document.getElementById("hideDone").addEventListener("change", render)
 
-  document.getElementById('clearWeek').addEventListener('click', function(){
-    if(confirm('Limpar TODAS as tarefas desta semana?')){
-      tasks=[]; save(); renderAll();
-    }
-  });
+  function render(){
+    // Abas
+    tabs.innerHTML="";
+    const tabAll=document.createElement("button"); tabAll.className="tab"; tabAll.textContent="Semana"; tabAll.setAttribute("aria-selected", String(activeTab==="semana")); tabAll.onclick=()=>{activeTab="semana"; render()}; tabs.appendChild(tabAll)
+    const days=[]; for(let i=0;i<7;i++){const iso=addDaysISO(weekStart,i); days.push(iso); const d=fromISO(iso); const b=document.createElement("button"); b.className="tab"; b.textContent=d.toLocaleDateString("pt-BR",{weekday:"short"})+" "+pad(d.getDate())+"/"+pad(d.getMonth()+1); b.setAttribute("aria-selected", String(activeTab===iso)); b.onclick=()=>{activeTab=iso; render()}; tabs.appendChild(b)}
 
-  q.addEventListener('input', renderAll);
-  hideDone.addEventListener('change', renderAll);
-  statusSel.addEventListener('change', renderAll);
-  csvBtn.addEventListener('click', exportCSV);
-  jsonExp.addEventListener('click', exportJSON);
-  jsonImp.addEventListener('change', importJSON);
+    // Preenche select de dia do Quick Add
+    const qaDay=document.getElementById("qaDay"); qaDay.innerHTML=""; days.forEach(iso=>{const o=document.createElement("option"); const d=fromISO(iso); o.value=iso; o.textContent=d.toLocaleDateString("pt-BR",{weekday:"short", day:"2-digit", month:"2-digit"}); qaDay.appendChild(o)})
+    qaDay.value = activeTab==="semana"? days[0] : activeTab;
 
-  document.getElementById('qaAdd').addEventListener('click', function(){
-    var title=(qaTitle.value||'').trim();
-    if(!title){ alert('Escreva um título.'); return; }
-    tasks.push({id:String(Math.random()).slice(2,9), client:qaClient.value, title:title, status:qaStatus.value, day:qaDay.value, done:false});
-    qaTitle.value=''; save(); renderAll();
-  });
+    const hideDone=document.getElementById("hideDone").checked;
 
-  function renderAll(){
-    var start=fromISO(weekStart); var end=fromISO(addDaysISO(weekStart,6));
-    weekRange.textContent = 'Semana ' + pad(start.getDate()) + '/' + pad(start.getMonth()+1) + ' – ' + pad(end.getDate()) + '/' + pad(end.getMonth()+1);
-    weekPick.value = weekStart;
-
-    qaDay.innerHTML='';
-    var dlist=[], i;
-    for(i=0;i<7;i++){ dlist.push(addDaysISO(weekStart,i)); }
-    for(i=0;i<dlist.length;i++){ var d=fromISO(dlist[i]); var o=document.createElement('option'); o.value=dlist[i]; o.textContent=brDay(d); qaDay.appendChild(o); }
-    if(!qaDay.value) qaDay.value=dlist[0];
-
-    renderAgenda();
-    renderClients();
-  }
-
-  function getFiltered(){
-    var txt=(q.value||'').toLowerCase();
-    var st=statusSel.value;
-    var out=[], i;
-    for(i=0;i<tasks.length;i++){
-      var t=tasks[i];
-      if(activeClient!=='todos' && t.client!==activeClient) continue;
-      if(st!=='todas' && t.status!==st) continue;
-      if(hideDone.checked && t.done) continue;
-      if(txt){
-        var hay=(t.title+' '+t.client).toLowerCase();
-        if(hay.indexOf(txt)===-1) continue;
-      }
-      out.push(t);
-    }
-    return out;
-  }
-
-  function renderAgenda(){
-    agenda.innerHTML='';
-    var byDay={}, i;
-    var filtered=getFiltered();
-    for(i=0;i<7;i++){ byDay[addDaysISO(weekStart,i)]=[]; }
-    for(i=0;i<filtered.length;i++){ if(byDay[filtered[i].day]) byDay[filtered[i].day].push(filtered[i]); }
-
-    for(var dayISO in byDay){
-      var dayArr=byDay[dayISO];
-      var d=fromISO(dayISO);
-      var h=document.createElement('h3'); h.textContent=brDay(d); agenda.appendChild(h);
-      var ul=document.createElement('ul');
-      if(dayArr.length===0){ var li=document.createElement('li'); li.className='muted'; li.textContent='Sem tarefas.'; ul.appendChild(li); }
-      for(i=0;i<dayArr.length;i++){
-        var t=dayArr[i];
-        var li=document.createElement('li');
-        if(t.done) li.className='done';
-
-        var tag=document.createElement('span'); tag.className='tag '+(PILL[t.client]||''); tag.textContent=t.client; li.appendChild(tag);
-
-        var txt=document.createElement('span'); txt.textContent=' '+t.title; txt.style.cursor='pointer';
-        txt.onclick=(function(ref){ return function(){ ref.done=!ref.done; save(); renderAll(); }; })(t);
-        li.appendChild(txt);
-
-        var st=document.createElement('span'); st.className='st '+t.status;
-        var dot=document.createElement('span'); dot.className='dot'; st.appendChild(dot);
-        var lab=document.createElement('span'); lab.textContent=' '+(LABEL[t.status]||t.status); st.appendChild(lab);
-        st.title='Clique para mudar o status';
-        st.onclick=(function(ref){ return function(){ var idx=0,j; for(j=0;j<STATUS.length;j++){ if(STATUS[j]===ref.status){ idx=j; break; } } ref.status=STATUS[(idx+1)%STATUS.length]; save(); renderAll(); }; })(t);
-        li.appendChild(st);
-
-        var del=document.createElement('span'); del.className='trash'; del.title='Excluir'; del.textContent='🗑️';
-        del.onclick=(function(ref){ return function(){ if(confirm('Excluir esta tarefa?')){ var k, arr=[]; for(k=0;k<tasks.length;k++){ if(tasks[k].id!==ref.id) arr.push(tasks[k]); } tasks=arr; save(); renderAll(); } }; })(t);
-        li.appendChild(del);
-
-        ul.appendChild(li);
-      }
-      agenda.appendChild(ul);
-    }
-  }
-
-  function renderClients(){
-    var map={}, i;
-    for(i=0;i<tasks.length;i++){
-      var c=tasks[i].client;
-      if(!map[c]) map[c]={done:0,total:0};
-      map[c].total++; if(tasks[i].done) map[c].done++;
+    listWrap.innerHTML="";
+    const makeCard=(t)=>{
+      const row=document.createElement("div"); row.className="card";
+      const check=document.createElement("button"); check.className="check"; check.dataset.checked=String(t.status==="feito"); check.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 12.5l4 3.5 8-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      check.onclick=()=>{t.status=(t.status==="feito"?"parado":"feito"); save(); render()}; row.appendChild(check);
+      const main=document.createElement("div"); const title=document.createElement("div"); title.className="taskTitle"; title.textContent=t.title;
+      const pill=document.createElement("span"); pill.className="pill "+(PILL_CLASS[t.client]||""); pill.textContent=t.client;
+      main.appendChild(title); main.appendChild(pill); row.appendChild(main);
+      const status=document.createElement("button"); status.className="statusBtn"; const dot=document.createElement("span"); dot.className="dotStatus "+t.status; status.appendChild(dot); const lab=document.createElement("span"); lab.textContent=" "+(LABEL[t.status]||t.status); status.appendChild(lab); status.onclick=()=>{const i=STATUS.indexOf(t.status); t.status=STATUS[(i+1)%STATUS.length]; save(); render()}; row.appendChild(status);
+      const del=document.createElement("button"); del.className="del"; del.title="Excluir"; del.innerHTML='🗑️'; del.onclick=()=>{ if(confirm('Excluir esta tarefa?')){ tasks = tasks.filter(x=>x.id!==t.id); save(); render(); } }; row.appendChild(del);
+      return row;
     }
 
-    clientsBar.innerHTML='';
-    var all=document.createElement('button'); all.className='chip'+(activeClient==='todos'?' active':''); all.textContent='Todos';
-    all.onclick=function(){ activeClient='todos'; renderAll(); };
-    clientsBar.appendChild(all);
-
-    for(var k in map){
-      var b=document.createElement('button'); b.className='chip '+(PILL[k]||'')+(activeClient===k?' active':''); b.textContent=k;
-      (function(name){ b.onclick=function(){ activeClient=(activeClient===name?'todos':name); renderAll(); }; })(k);
-      clientsBar.appendChild(b);
+    function groupFor(dayISO){
+      const items = tasks.filter(t=>t.day===dayISO && (!hideDone || t.status!=="feito"));
+      const dayDiv=document.createElement("div");
+      const d=fromISO(dayISO); const h=document.createElement("div"); h.className="dayHeader"; h.innerHTML = `<div>${d.toLocaleDateString('pt-BR',{weekday:'long'})} ${pad(d.getDate())}/${pad(d.getMonth()+1)}</div>`; dayDiv.appendChild(h);
+      const list=document.createElement("div"); list.className="list";
+      if(items.length===0){const empty=document.createElement("div"); empty.className="meta"; empty.textContent="Sem tarefas."; list.appendChild(empty)}
+      else { items.forEach(t=> list.appendChild(makeCard(t))) }
+      dayDiv.appendChild(list); return dayDiv;
     }
 
-    tblClients.innerHTML='';
-    for(var cName in map){
-      var tr=document.createElement('tr');
-      var td1=document.createElement('td'); var chip=document.createElement('span'); chip.className='chip '+(PILL[cName]||''); chip.textContent=cName; td1.appendChild(chip);
-      var td2=document.createElement('td'); td2.className='right'; td2.textContent=map[cName].done;
-      var td3=document.createElement('td'); td3.className='right'; td3.textContent=map[cName].total;
-      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
-      tblClients.appendChild(tr);
-    }
+    if(activeTab==="semana"){ days.forEach(iso=> listWrap.appendChild(groupFor(iso)) ) }
+    else { listWrap.appendChild(groupFor(activeTab)) }
+
+    const total=tasks.length; const done=tasks.filter(t=>t.status==="feito").length; totalCount.textContent=total; doneCount.textContent=done; document.getElementById("progressFill").style.width=(total? Math.round(100*done/total):0)+"%";
   }
 
-  function exportCSV(){
-    var rows = [['Dia','Data','Cliente','Título','Status','Concluída']];
-    var filtered=getFiltered();
-    for(var i=0;i<filtered.length;i++){
-      var t=filtered[i];
-      var d=fromISO(t.day);
-      rows.push([brDay(d), t.day, t.client, String(t.title).replace(/\n/g,' '), LABEL[t.status]||t.status, t.done?'Sim':'Não']);
-    }
-    var csv = '';
-    for(var r=0;r<rows.length;r++){ csv += rows[r].map(function(s){ s=String(s); if(s.indexOf(',')>-1 || s.indexOf('"')>-1){ s='"'+s.replace(/"/g,'""')+'"'; } return s; }).join(',') + '\n'; }
-    var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tarefas-semana.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  }
+  function gotoWeek(startISO){ weekStart=startISO; tasks=load(); document.getElementById('weekPicker').value=weekStart; activeTab='semana'; render() }
 
-  function exportJSON(){
-    var data = JSON.stringify({weekStart:weekStart, tasks:tasks}, null, 2);
-    var blob = new Blob([data], {type:'application/json'});
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='tarefas-'+weekStart+'.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  }
-
-  function importJSON(evt){
-    var f = evt.target.files[0]; if(!f) return;
-    var reader = new FileReader();
-    reader.onload = function(){
-      try{
-        var data = JSON.parse(reader.result);
-        var arr = data.tasks || data;
-        if(!arr || !arr.length){ alert('Arquivo sem tarefas.'); return; }
-        if(confirm('Importar e mesclar com a semana atual?')){
-          for(var i=0;i<arr.length;i++){
-            var t=arr[i];
-            if(!t.day){ t.day = weekStart; }
-            tasks.push({id:String(Math.random()).slice(2,9), client:t.client||'Cliente', title:t.title||'(sem título)', status:t.status||'parado', day:t.day, done:!!t.done});
-          }
-          save(); renderAll();
-        }
-      }catch(e){ alert('JSON inválido.'); }
-      evt.target.value='';
-    };
-    reader.readAsText(f);
-  }
-
-  function gotoWeek(startISO){
-    weekStart = startISO;
-    tasks = load();
-    renderAll();
-  }
-
+  // Init
   gotoWeek(toISO(mondayOf(new Date())));
 })();
 </script>
