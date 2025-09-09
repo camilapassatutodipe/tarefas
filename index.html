@@ -126,6 +126,9 @@
     #lockscreen .error{color:#b91c1c; font-size:12px; min-height:18px}
   </style>
   <script>document.documentElement.classList.add('locked');</script>
+  
+  <!-- Supabase JS (para multiusuário e tempo real) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <!-- Tela de senha -->
@@ -163,14 +166,16 @@
         <button class="tab" data-view="weekly">Semanal</button>
         <button class="tab" data-view="deliveries">Entregas</button>
       </nav>
-      <div class="seg">
+      $1
         <button class="btn secondary" id="btnNewTask">+ Nova tarefa</button>
         <button class="btn secondary" id="btnExportCsv" title="Baixar CSV das tarefas">Exportar CSV</button>
         <button class="btn secondary" id="btnExportJson" title="Baixar backup JSON">Backup JSON</button>
         <label class="btn ghost" for="importFile" title="Importar JSON"><input type="file" id="importFile" accept="application/json" style="display:none">Importar</label>
         <button class="btn" id="btnPrint">Imprimir relatório</button>
-        <button class="btn ghost" id="btnLogout" title="Sair da sessão">Sair</button>
-      </div>
+        <button class="btn secondary" id="btnSBLogin" title="Entrar para sincronizar com a equipe">Entrar (time)</button>
+        <button class="btn ghost hidden" id="btnSBLogout" title="Sair da conta da equipe">Sair (time)</button>
+        <button class="btn ghost" id="btnLogout" title="Bloquear esta página">Bloquear página</button>
+      $2
     </div>
 
     <!-- Toolbar (filtros) -->
@@ -365,14 +370,92 @@
 </script>
 
 <script>
-  // ===== Utilidades =====
+// === SUPABASE — Configuração e helpers ===
+const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co'; // <-- cole aqui
+const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';               // <-- cole aqui
+const TEAM = 'dipe';
+const sb = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+let isAuthed = false, rtChannel = null;
+
+function toggleAuthBtns(on){
+  const inBtn = document.getElementById('btnSBLogin');
+  const outBtn = document.getElementById('btnSBLogout');
+  if(!inBtn||!outBtn) return;
+  inBtn.classList.toggle('hidden', !!on);
+  outBtn.classList.toggle('hidden', !on);
+}
+
+async function bootAuth(){
+  if(!sb) return;
+  const { data:{ session } } = await sb.auth.getSession();
+  isAuthed = !!session; toggleAuthBtns(isAuthed);
+  if(isAuthed){ await syncFromDB(); setupRealtime(); }
+  sb.auth.onAuthStateChange(async (_evt, session)=>{
+    isAuthed = !!session; toggleAuthBtns(isAuthed);
+    if(isAuthed){ await syncFromDB(); setupRealtime(); } else { if(rtChannel){ sb.removeChannel(rtChannel); rtChannel=null; } }
+  });
+  document.getElementById('btnSBLogin')?.addEventListener('click', async ()=>{
+    const email = prompt('Digite seu e-mail para receber o link de acesso:');
+    if(!email) return;
+    const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href } });
+    alert(error ? ('Erro: '+error.message) : 'Enviamos um link de acesso para seu e-mail.');
+  });
+  document.getElementById('btnSBLogout')?.addEventListener('click', async ()=>{ await sb.auth.signOut(); });
+}
+
+async function syncFromDB(){
+  if(!sb) return;
+  const { data, error } = await sb.from('tasks').select('*').eq('team', TEAM).order('updated', { ascending:false });
+  if(error){ console.error(error); return; }
+  state.tasks = data||[];
+  state.collabs = Array.from(new Set(state.tasks.flatMap(t=>t.collabs||[])));
+  document.getElementById('filterCollab').innerHTML = '<option value="">Todos</option>' + state.collabs.map(c=>`<option>${c}</option>`).join('');
+  render();
+}
+
+function setupRealtime(){
+  if(!sb) return; if(rtChannel){ sb.removeChannel(rtChannel); }
+  rtChannel = sb.channel('public:tasks').on('postgres_changes', { event:'*', schema:'public', table:'tasks' }, (payload)=>{
+    const row = payload.new || payload.old; if(!row || row.team!==TEAM) return;
+    if(payload.eventType==='INSERT' || payload.eventType==='UPDATE'){
+      const i = state.tasks.findIndex(x=>x.id===row.id); if(i>=0) state.tasks[i]=row; else state.tasks.unshift(row);
+    } else if(payload.eventType==='DELETE'){
+      state.tasks = state.tasks.filter(x=>x.id!==row.id);
+    }
+    state.collabs = Array.from(new Set(state.tasks.flatMap(t=>t.collabs||[])));
+    document.getElementById('filterCollab').innerHTML = '<option value="">Todos</option>' + state.collabs.map(c=>`<option>${c}</option>`).join('');
+    render();
+  }).subscribe();
+}
+
+async function dbInsert(t){
+  const payload = { title:t.title, client:t.client, status:t.status, date: t.date||null, collabs:t.collabs, desc:t.desc, team: TEAM };
+  const { data, error } = await sb.from('tasks').insert(payload).select().single();
+  if(error){ alert('Erro ao salvar: '+error.message); return null; }
+  return data;
+}
+async function dbUpdate(t){
+  const payload = { title:t.title, client:t.client, status:t.status, date: t.date||null, collabs:t.collabs, desc:t.desc, updated: new Date().toISOString() };
+  const { data, error } = await sb.from('tasks').update(payload).eq('id', t.id).select().single();
+  if(error){ alert('Erro ao atualizar: '+error.message); return null; }
+  return data;
+}
+async function dbDelete(id){
+  const { error } = await sb.from('tasks').delete().eq('id', id);
+  if(error){ alert('Erro ao excluir: '+error.message); }
+}
+
+bootAuth();
+</script>
+
+$1
   const $ = (sel, el=document) => el.querySelector(sel);
   const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '';
   const todayISO = () => new Date().toISOString().slice(0,10);
   const mondayOf = (iso) => { const d=new Date(iso||todayISO()); const day = (d.getDay()+6)%7; d.setDate(d.getDate()-day); return d.toISOString().slice(0,10)}; // segunda
   const addDays = (iso, n) => { const d=new Date(iso); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10)};
-  const uid = () => Math.random().toString(36).slice(2,9);
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16)}));
 
   // ===== Estado =====
   const STORAGE_KEY = 'dipe_board_v1';
@@ -445,9 +528,9 @@
     const close = (e)=>{ if(e.target===m) hide() };
     m.addEventListener('click', close, { once:true });
 
-    $('#btnSaveTask').onclick = () => {
+    $('#btnSaveTask').onclick = async () => {
       const t = {
-        id: task?.id || uid(),
+        id: task?.id || undefined,
         title: $('#f_title').value.trim(),
         client: $('#f_client').value,
         status: $('#f_status').value,
@@ -457,100 +540,31 @@
         updated: Date.now()
       };
       if(!t.title) { alert('Dê um título à tarefa.'); return }
-      // Atualiza lista de colaboradores globais
       t.collabs.forEach(c=>{ if(!state.collabs.includes(c)) state.collabs.push(c) });
-      $('#filterCollab').innerHTML = '<option value="">Todos</option>' + state.collabs.map(c=>`<option>${c}</option>`).join('');
+      document.getElementById('filterCollab').innerHTML = '<option value="">Todos</option>' + state.collabs.map(c=>`<option>${c}</option>`).join('');
 
-      // Salvar
-      const idx = state.tasks.findIndex(x=>x.id===t.id);
-      if(idx>=0) state.tasks[idx]=t; else state.tasks.push(t);
-      save(); render(); hide();
+      if(isAuthed && sb){
+        if(t.id){
+          const row = await dbUpdate(t); if(row){ const i=state.tasks.findIndex(x=>x.id===row.id); if(i>=0) state.tasks[i]=row; else state.tasks.unshift(row); }
+        } else {
+          const row = await dbInsert(t); if(row){ state.tasks.unshift(row); }
+        }
+      } else {
+        if(!t.id) t.id = uid();
+        const idx = state.tasks.findIndex(x=>x.id===t.id);
+        if(idx>=0) state.tasks[idx]=t; else state.tasks.push(t);
+        save();
+      }
+      render(); hide();
     };
-    $('#btnDeleteTask').onclick = () => {
+    $('#btnDeleteTask').onclick = async () => {
       if(task && confirm('Excluir esta tarefa?')){
-        state.tasks = state.tasks.filter(x=>x.id!==task.id); save(); render(); hide();
+        if(isAuthed && sb){ await dbDelete(task.id); } else {
+          state.tasks = state.tasks.filter(x=>x.id!==task.id); save();
+        }
+        render(); hide();
       }
     }
-
-    function hide(){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); document.body.style.overflow='auto'; }
-  }
-
-  // ===== Renderização =====
-  function filteredTasks(){
-    const q = $('#q').value.trim().toLowerCase();
-    const fc = $('#filterClient').value; const fco = $('#filterCollab').value; const fs = $('#filterStatus').value;
-    return state.tasks.filter(t=>{
-      const matchesQ = !q || (t.title+t.desc).toLowerCase().includes(q);
-      const matchesC = !fc || t.client===fc;
-      const matchesCo = !fco || (t.collabs||[]).includes(fco);
-      const matchesS = !fs || t.status===fs;
-      return matchesQ && matchesC && matchesCo && matchesS;
-    });
-  }
-
-  function render(){
-    const list = filteredTasks();
-    renderStats(list);
-
-    // Diário
-    const d = $('#view-daily');
-    if(!d.classList.contains('hidden')){
-      const day = $('#dateDaily').value || todayISO();
-      const tasks = list.filter(t=> (t.date||'')===day && t.status!=='Backlog');
-      const todo = tasks.filter(t=>t.status==='A Fazer');
-      const doing = tasks.filter(t=>t.status==='Em Progresso');
-      const done = tasks.filter(t=>t.status==='Concluído');
-      d.querySelectorAll('.drop').forEach(el=> el.innerHTML='');
-      renderCards(d.querySelector('[data-status="A Fazer"] .drop'), todo, 'daily');
-      renderCards(d.querySelector('[data-status="Em Progresso"] .drop'), doing, 'daily');
-      renderCards(d.querySelector('[data-status="Concluído"] .drop'), done, 'daily');
-      $('#count_todo').textContent=todo.length; $('#count_doing').textContent=doing.length; $('#count_done').textContent=done.length;
-    }
-
-    // Semanal
-    const w = $('#view-weekly');
-    if(!w.classList.contains('hidden')){
-      const anyDay = $('#dateWeekly').value || todayISO();
-      const mon = mondayOf(anyDay);
-      w.innerHTML='';
-      for(let i=0;i<7;i++){
-        const day = addDays(mon,i);
-        const dayTasks = list.filter(t=> (t.date||'')===day && t.status!=='Backlog');
-        const name = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'][i];
-        const col = document.createElement('div'); col.className='col'; col.dataset.day = day;
-        col.innerHTML = `<div class="col-head"><div class="col-title">📅 ${name} <span class="pill" style="margin-left:8px">${fmtDate(day)}</span></div><span class="badge">${dayTasks.length}</span></div><div class="drop" data-drop="weekly"></div>`;
-        w.appendChild(col);
-        renderCards($('.drop', col), dayTasks, 'weekly');
-      }
-    }
-
-    // Entregas
-    const e = $('#view-deliveries');
-    if(!e.classList.contains('hidden')){
-      const tbody = $('#tbl tbody');
-      tbody.innerHTML='';
-      list.sort((a,b)=> (a.date||'').localeCompare(b.date||''));
-      for(const t of list){
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${escapeHtml(t.title)}</strong><div style="opacity:.7;font-size:12px;margin-top:4px">${escapeHtml(t.desc||'')}</div></td>
-          <td>${clientTag(t.client)}</td>
-          <td>${(t.collabs||[]).map(c=>avatarHTML(c)).join(' ')}</td>
-          <td><span class="badge">${t.status}</span></td>
-          <td>${fmtDate(t.date||'')}</td>
-          <td>${new Date(t.updated||Date.now()).toLocaleString('pt-BR')}</td>
-          <td><button class="btn ghost" data-edit="${t.id}">Editar</button></td>`;
-        tbody.appendChild(tr);
-      }
-      // editar
-      $$('button[data-edit]').forEach(b=> b.addEventListener('click', ()=>{
-        const t = state.tasks.find(x=>x.id===b.dataset.edit); openTaskModal(t);
-      }))
-    }
-
-    // DnD listeners
-    $$('.drop').forEach(drop=>{
-      drop.ondragover = (e)=>{ e.preventDefault(); drop.style.background='#faf9f4' };
       drop.ondragleave = ()=> drop.style.background='';
       drop.ondrop = (e)=>{
         e.preventDefault(); drop.style.background='';
