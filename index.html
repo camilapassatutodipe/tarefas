@@ -394,8 +394,8 @@
 
 <script>
 // === SUPABASE — Configuração e helpers ===
-const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';
+const SUPABASE_URL = 'https://agvlectfxflbdccklesk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndmxlY3RmeGZsYmRjY2tsZXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczODA5MzUsImV4cCI6MjA3Mjk1NjkzNX0.lN-cwvX7t3BRLQdQ3ylmb__Ux7y9Zaa1dBp6x7vSKyI';
 const TEAM = 'dipe';
 const sb = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 let isAuthed = false, rtChannel = null;
@@ -818,6 +818,125 @@ bootAuth();
 
   // Estado inicial — render
   render();
+  </script>
+  
+  <!-- ===== Clientes: estilos leves ===== -->
+  <style>
+    .client-row{display:grid;grid-template-columns:1fr 120px 40px;gap:10px;align-items:center}
+    .client-row input[type="text"]{width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--muted)}
+    .client-row input[type="color"]{width:100%;height:38px;border:none;background:transparent}
+    .client-row .del{appearance:none;border:1px solid var(--muted);background:#fff;border-radius:10px;height:38px;cursor:pointer}
+  </style>
+
+  <!-- ===== Modal de Clientes ===== -->
+  <div class="modal" id="clientsModal" aria-hidden="true" aria-labelledby="clientsTitle" style="display:none"></div>
+
+  <script>
+  // ===== Extensões: Clientes dinâmicos + login por e-mail no overlay =====
+  (function(){
+    // --- defaults de clientes
+    const DEFAULT_CLIENTS=[
+      {name:'Matec', color:'#02d1ce', text:'#0a0a0a'},
+      {name:'Construcione', color:'#000000', text:'#ffffff'},
+      {name:'Vertticom', color:'#d67a59', text:'#ffffff'},
+      {name:'LRocha', color:'#7b1e2b', text:'#ffffff'}
+    ];
+
+    // --- garantir state.clients
+    if(!window.state) window.state={};
+    if(!Array.isArray(window.state.clients) || window.state.clients.length===0){
+      try{ const saved = JSON.parse(localStorage.getItem('dipe_board_v1')||'null'); if(saved && Array.isArray(saved.clients)) window.state.clients=saved.clients; }catch(e){}
+      if(!Array.isArray(window.state.clients) || window.state.clients.length===0){ window.state.clients = DEFAULT_CLIENTS.slice(); }
+      if(typeof save==='function'){ try{ save(); }catch(e){} }
+    }
+
+    // --- helper
+    function pickText(hex){ try{ const c=hex.replace('#',''); const r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16); const yiq=((r*299)+(g*587)+(b*114))/1000; return yiq>=128?'#0a0a0a':'#ffffff'; }catch(e){ return '#111'; } }
+
+    // --- sobrescrever clientTag para usar paleta dinâmica
+    window.clientTag = function(name){
+      const c = (window.state.clients||DEFAULT_CLIENTS).find(x=>x.name===name) || {color:'#999', text:'#111'};
+      return `<span class="tag" style="background:${c.color};color:${c.text}"><span class="dot" style="background:#fff;opacity:.9"></span>${name}</span>`;
+    };
+
+    // --- reconstruir selects de cliente
+    function rebuildClientControls(){
+      const arr = window.state.clients||DEFAULT_CLIENTS;
+      const fc = document.getElementById('filterClient'); if(fc){ fc.innerHTML = '<option value="">Todos</option>' + arr.map(c=>`<option>${c.name}</option>`).join(''); }
+      const sel = document.getElementById('f_client'); if(sel){ sel.innerHTML = arr.map(c=>`<option>${c.name}</option>`).join(''); }
+    }
+
+    // adicionar botão "Clientes" se não existir
+    const btnPrint = document.getElementById('btnPrint');
+    if(btnPrint && !document.getElementById('btnClients')){
+      const b=document.createElement('button'); b.className='btn secondary'; b.id='btnClients'; b.textContent='Clientes'; b.title='Gerenciar clientes';
+      btnPrint.insertAdjacentElement('afterend', b);
+    }
+
+    // construir modal de clientes quando abrir
+    function openClients(){
+      const m = document.getElementById('clientsModal');
+      m.style.display=''; m.classList.add('show'); m.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
+      const sheet = document.createElement('div'); sheet.className='sheet';
+      sheet.innerHTML = `
+        <div class="sheet-h"><strong id="clientsTitle">Clientes</strong>
+          <div><button class="btn ghost" id="btnAddClient">+ Adicionar</button>
+          <button class="btn" id="btnSaveClients">Salvar</button></div></div>
+        <div class="sheet-b"><div id="clientsList" style="display:grid;gap:10px"></div>
+        <div style="font-size:12px;opacity:.7;margin-top:8px">Remover um cliente não apaga tarefas antigas; elas continuam com o nome antigo até você editar.</div></div>`;
+      m.innerHTML=''; m.appendChild(sheet);
+      const list = sheet.querySelector('#clientsList');
+      (window.state.clients||DEFAULT_CLIENTS).forEach(c=> addRow(c.name,c.color,list));
+      m.onclick=(e)=>{ if(e.target===m){ closeClients(); } };
+      sheet.querySelector('#btnAddClient').onclick=()=> addRow('', '#888888', list);
+      sheet.querySelector('#btnSaveClients').onclick=()=>{
+        const rows = Array.from(list.querySelectorAll('.client-row'));
+        const next = rows.map(r=>{ const n=r.querySelector('input[type="text"]').value.trim(); const col=r.querySelector('input[type="color"]').value; return n?{name:n,color:col,text:pickText(col)}:null }).filter(Boolean);
+        if(next.length===0){ alert('Adicione pelo menos um cliente.'); return; }
+        window.state.clients = next; if(typeof save==='function'){ try{ save(); }catch(e){} }
+        rebuildClientControls(); if(typeof render==='function') render(); closeClients();
+      };
+    }
+    function addRow(name,color,list){
+      const row=document.createElement('div'); row.className='client-row';
+      row.innerHTML=`<input type="text" placeholder="Nome do cliente" value="${name||''}">
+        <input type="color" value="${color||'#888888'}">
+        <button class="del" title="Remover">🗑️</button>`;
+      row.querySelector('.del').onclick=()=> row.remove();
+      list.appendChild(row);
+    }
+    function closeClients(){ const m=document.getElementById('clientsModal'); m.classList.remove('show'); m.setAttribute('aria-hidden','true'); document.body.style.overflow='auto'; m.style.display='none'; }
+
+    document.getElementById('btnClients')?.addEventListener('click', openClients);
+    rebuildClientControls();
+
+    // --- inserir login por e-mail na tela de senha (overlay)
+    const ls = document.getElementById('lockscreen');
+    if(ls && !document.getElementById('lock-email')){
+      const panel = ls.querySelector('.panel');
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `
+        <hr style="margin:14px 0;border:none;border-top:1px dashed #e5e5e5">
+        <h2 style="font-size:14px;margin:0 0 8px">Login do time</h2>
+        <label for="lock-email" style="font-size:12px;color:#666">E-mail corporativo</label>
+        <input type="email" id="lock-email" placeholder="seunome@digitalparaempresas.com.br" />
+        <button class="btn" type="button" id="lock-send">Enviar link de acesso</button>
+        <div class="error" id="lock-msg"></div>`;
+      panel.appendChild(wrap);
+      document.getElementById('lock-send').addEventListener('click', async ()=>{
+        try{
+          if(!window.sb){
+            if(window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY){ window.sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY); }
+          }
+          if(!window.sb){ alert('Configure o Supabase (URL e Anon Key) no index.html.'); return; }
+          const email = document.getElementById('lock-email').value.trim();
+          if(!email || !email.endsWith('@digitalparaempresas.com.br')){ document.getElementById('lock-msg').textContent = 'Use um e-mail @digitalparaempresas.com.br'; return; }
+          const { error } = await window.sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href } });
+          document.getElementById('lock-msg').textContent = error ? ('Erro: '+error.message) : ('Enviamos um link de acesso para '+email);
+        }catch(err){ document.getElementById('lock-msg').textContent = 'Erro inesperado'; }
+      });
+    }
+  })();
   </script>
 </body>
 </html>
