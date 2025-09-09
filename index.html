@@ -1,1061 +1,427 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Painel Dipe — Diário • Semanal • Entregas</title>
+  <title>Painel Dipe — Simplificado</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root{
-      /* Paleta Dipe */
-      --bg:#1b1b18;           /* fundo/header */
-      --paper:#f5f4ea;        /* superfície */
-      --muted:#e7e6de;        /* bordas suaves */
-      --ink:#1b1b18;          /* texto principal */
-      --accent:#ff573b;       /* botões e foco */
-      --accent-ink:#fff;
-
-      /* Cores por cliente (ajustáveis) */
-      --matec:#02d1ce;        /* azul piscina */
-      --construcione:#000000; /* preto */
-      --vertticom:#d67a59;    /* terracota sugerida */
-      --lrocha:#7b1e2b;       /* vermelho vinho */
-
-      --success:#10b981; --warn:#f59e0b; --danger:#ef4444;
-      --todo:#d6d3d1; --doing:#60a5fa; --done:#22c55e;
-      --shadow: 0 10px 30px rgba(0,0,0,.08);
-      --radius: 16px;
+      --bg:#f6f5f0; --text:#111; --muted:#e7e3da; --soft:#fff; --accent:#ff573b; --shadow:0 8px 30px rgba(0,0,0,.08);
+      --todo:#fdf2d6; --doing:#e7f1ff; --done:#e8f7e7;
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0; font-family:Roboto, system-ui, -apple-system, Segoe UI, Arial; color:var(--ink); background:linear-gradient(180deg,#fbfaf5 0%, #f2f1ea 100%)}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif}
+    .container{max-width:1200px;margin:0 auto;padding:16px}
+    header{position:sticky;top:0;background:#111;color:#fff;box-shadow:var(--shadow);z-index:10}
+    header .container{display:flex;align-items:center;gap:12px}
+    .brand{display:flex;align-items:center;gap:10px;padding:10px 0}
+    .badge{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#ff7b6e;color:#fff;font-weight:800}
+    .grow{flex:1}
+    .btn{appearance:none;border:1px solid #ddd;background:#fff;color:#111;border-radius:12px;padding:8px 12px;font-weight:600;cursor:pointer}
+    .btn.secondary{background:#111;color:#fff;border-color:rgba(255,255,255,.2)}
+    .btn.ghost{background:transparent;border-color:#ddd}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
+    .filters{display:grid;grid-template-columns:1fr 160px 160px 160px 160px auto;gap:10px;align-items:end;margin:16px 0}
+    .filters label{font-size:12px;opacity:.75;margin-left:6px}
+    input,select,textarea{background:#fff;color:#111;border:1px solid var(--muted);border-radius:12px;padding:10px}
+    .board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .col{background:var(--soft);border-radius:16px;box-shadow:var(--shadow)}
+    .col h3{margin:0;padding:12px 14px;border-bottom:1px solid var(--muted);display:flex;align-items:center;gap:8px}
+    .list{padding:12px;min-height:220px}
+    .card{background:#fff;border:1px solid var(--muted);border-radius:12px;padding:10px;margin:0 0 10px;box-shadow:0 4px 16px rgba(0,0,0,.04)}
+    .tag{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:12px}
+    .row{display:flex;gap:8px;align-items:center}
+    .right{margin-left:auto}
+    .hidden{display:none !important}
+    table{width:100%;border-collapse:collapse;background:#fff;border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+    th,td{padding:10px;border-bottom:1px solid var(--muted);text-align:left;font-size:14px}
 
-    /* Header */
-    .bar{position:sticky; top:0; z-index:20; background:var(--bg); color:#fff; border-bottom:1px solid rgba(255,255,255,.08)}
-    .bar-inner{max-width:1300px; margin:0 auto; padding:14px 18px; display:flex; gap:16px; align-items:center}
-    .brand{display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.3px}
-    .brand-badge{width:28px; height:28px; display:grid; place-items:center; border-radius:8px; background:var(--accent); color:var(--accent-ink); font-size:14px}
-    .seg{display:flex; gap:10px; align-items:center; margin-left:auto}
+    /* Login */
+    #login{min-height:100vh;display:grid;place-items:center;padding:24px}
+    .panel{width:min(480px,92vw);background:#fff;border-radius:16px;box-shadow:var(--shadow);padding:18px}
+    .panel h1{margin:0 0 6px;font-size:20px}
+    .panel small{opacity:.7}
+    .panel .row{justify-content:space-between}
+    .panel .msg{font-size:12px;margin-top:8px;color:#065f46;min-height:16px}
 
-    /* Tabs */
-    .tabs{display:flex; gap:8px; flex-wrap:wrap}
-    .tab{appearance:none; border:1px solid rgba(255,255,255,.18); color:#fff; background:transparent; padding:8px 12px; border-radius:12px; cursor:pointer}
-    .tab.active{background:#fff; color:var(--bg); border-color:#fff}
-
-    /* Toolbar */
-    .toolbar{max-width:1300px; margin:14px auto 0; padding:0 18px 14px; display:flex; flex-wrap:wrap; gap:10px; align-items:center}
-    .chip{display:inline-flex; gap:8px; align-items:center; padding:8px 10px; border-radius:999px; background:#fff; border:1px solid var(--muted); box-shadow:var(--shadow)}
-    .chip input, .chip select{border:none; outline:none; font:inherit; background:transparent}
-    .icon{opacity:.7}
-    .btn{appearance:none; border:none; background:var(--accent); color:var(--accent-ink); padding:10px 14px; border-radius:12px; cursor:pointer; box-shadow:var(--shadow); font-weight:600}
-    .btn.secondary{background:#fff; color:var(--ink); border:1px solid var(--muted)}
-    .btn.ghost{background:transparent; color:var(--ink); border:1px solid var(--muted)}
-
-    /* Stats */
-    .stats{max-width:1300px; margin:0 auto; padding:0 18px 16px; display:grid; grid-template-columns:repeat(6,1fr); gap:12px}
-    .stat{background:#fff; border:1px solid var(--muted); border-radius:var(--radius); padding:14px; box-shadow:var(--shadow)}
-    .stat h4{margin:0 0 6px; font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:#666}
-    .stat .v{font-size:20px; font-weight:700}
-
-    /* Boards */
-    .wrap{max-width:1300px; margin:0 auto; padding:0 18px 28px}
-    .board{display:grid; gap:16px}
-    .board.daily{grid-template-columns:repeat(3,1fr)}
-    .board.weekly{grid-template-columns:repeat(7, 1fr)}
-
-    .col{background:#fff; border:1px solid var(--muted); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:240px}
-    .col-head{padding:12px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--muted); background:linear-gradient(180deg,#ffffff 0,#fbfbfb 100%)}
-    .col-title{font-weight:700; display:flex; gap:8px; align-items:center}
-    .drop{flex:1; padding:10px; min-height:160px}
-
-    /* Cards */
-    .card{background:#fff; border:1px solid var(--muted); border-radius:12px; padding:10px; margin:10px 6px; box-shadow:var(--shadow); cursor:grab}
-    .card.dragging{opacity:.5}
-    .tag{display:inline-flex; align-items:center; gap:8px; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid rgba(0,0,0,.08)}
-    .tag .dot{width:8px; height:8px; border-radius:999px}
-    .meta{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:8px}
-    .avatars{display:flex}
-    .avatar{width:22px;height:22px;border-radius:999px;display:grid;place-items:center; font-size:11px; font-weight:700; color:#fff; margin-right:-6px; border:2px solid #fff}
-    .badge{font-size:11px; padding:2px 6px; border-radius:999px; background:#f3f3f0; border:1px solid var(--muted)}
-
-    /* Table (Entregas) */
-    table{width:100%; border-collapse:separate; border-spacing:0}
-    th, td{padding:12px; border-bottom:1px solid var(--muted); text-align:left}
-    thead th{position:sticky; top:0; background:#fff; z-index:1}
-    tbody tr:hover{background:#faf9f4}
-
-    /* Modal */
-    .modal{position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:center; justify-content:center; z-index:50}
-    .modal.show{display:flex}
-    .sheet{width:min(680px,92vw); background:#fff; border-radius:20px; box-shadow:0 30px 60px rgba(0,0,0,.25); overflow:hidden}
-    .sheet-h{display:flex; justify-content:space-between; align-items:center; padding:16px 18px; border-bottom:1px solid var(--muted)}
-    .sheet-b{padding:18px}
-    .grid{display:grid; gap:12px; grid-template-columns:1fr 1fr}
-    .grid .full{grid-column:1/-1}
-    label{font-size:12px; color:#666}
-    input[type="text"], input[type="date"], textarea, select{width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--muted); background:#fff; font:inherit; resize:vertical}
-
-    /* Helpers */
-    .hidden{display:none}
-    .pill{padding:4px 8px; border-radius:999px; border:1px solid var(--muted); background:#fff}
-    .divider{height:1px; background:var(--muted); margin:10px 0}
-
-    /* Responsive */
-    @media (max-width:1100px){
-      .stats{grid-template-columns:repeat(3,1fr)}
-    }
-    @media (max-width:800px){
-      .board.daily{grid-template-columns:1fr}
-      .board.weekly{grid-template-columns:repeat(2,1fr)}
-      .grid{grid-template-columns:1fr}
-      .seg{flex-wrap:wrap}
-    }
-    /* Ajustes de visibilidade em header escuro */
-  header .btn.ghost{border:1px solid rgba(255,255,255,.35); color:#fff}
-  header #btnSBLogout{background:#fff; color:#111; border-color:#fff}
-  header #btnSBLogin{background:#111; color:#fff; border-color:rgba(255,255,255,.2)}
-  
-  /* Rótulos compactos acima dos filtros */
-  .filter-wrap{display:grid; gap:6px}
-  .filter-wrap label{font-size:12px; opacity:.7; padding-left:4px}
-  /* Forçar legibilidade em superfícies claras */
-  input, select, textarea { color:#111 !important; background:#fff !important; }
-  ::placeholder{ color:#666 !important; opacity:1 }
-  /* Contraste do header escuro */
-  header .btn{border-color:rgba(255,255,255,.25)}
-  header .btn, header .btn *{ color:#fff !important }
-  header #btnSBLogout{ background:#fff !important; color:#111 !important; border-color:#fff !important }
-  header #btnSBLogin{ background:#111 !important; color:#fff !important; border-color:rgba(255,255,255,.2) !important }
-  .filter-wrap{display:grid; gap:6px}
-  .filter-wrap label{font-size:12px; opacity:.75; padding-left:4px}
-</style>
-  
-  <!-- Gate de senha (básico) -->
-  <style>
-    html.locked body{overflow:hidden}
-    #lockscreen{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:linear-gradient(180deg,#1b1b18 0,#2a2a26 100%); z-index:9999 }
-    #lockscreen .panel{ width:min(420px,92vw); background:#fff; border-radius:16px; padding:18px; box-shadow:0 20px 60px rgba(0,0,0,.4) }
-    #lockscreen h1{margin:0 0 10px; font-size:18px}
-    #lockscreen label{font-size:12px; color:#666}
-    #lockscreen input[type=password]{width:100%; padding:10px 12px; border-radius:12px; border:1px solid #ddd; font:inherit; margin:8px 0 12px}
-    #lockscreen .btn{appearance:none; border:none; background:var(--accent); color:#fff; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600}
-    #lockscreen .error{color:#b91c1c; font-size:12px; min-height:18px}
+    @media (max-width:900px){.filters{grid-template-columns:1fr 1fr 1fr;}}
   </style>
-  <script>document.documentElement.classList.add('locked');</script>
-  
-  <!-- Supabase JS (para multiusuário e tempo real) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <!-- Tela de senha -->
-  <div id="lockscreen" role="dialog" aria-modal="true" aria-labelledby="ls-title">
+  <!-- LOGIN (aparece quando não autenticado) -->
+  <section id="login" class="">
     <div class="panel">
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-        <div class="brand-badge">D</div>
-        <div><strong>Agência Dipe</strong><div style="font-size:12px;opacity:.7">Acesso restrito</div></div>
-      </div>
-      <h1 id="ls-title">Digite a senha</h1>
-      <form id="lock-form">
-        <label for="lock-pass">Senha</label>
-        <input type="password" id="lock-pass" placeholder="••••••••" required />
-        <div style="display:flex;align-items:center;gap:8px;margin:0 0 12px">
-          <input type="checkbox" id="lock-remember" />
-          <label for="lock-remember">Lembrar por 7 dias neste dispositivo</label>
-        </div>
-        <div class="error" id="lock-error"></div>
-        <button class="btn" type="submit">Entrar</button>
-      </form>
-    </div>
-  </div>
-  <!-- Header / Tabs -->
-  <header class="bar" role="banner">
-    <div class="bar-inner">
-      <div class="brand" title="Agência Dipe | Painel de tarefas">
-        <div class="brand-badge">D</div>
+      <div class="row" style="gap:10px">
+        <div class="badge">D</div>
         <div>
-          <div style="font-size:14px; opacity:.8">Agência Dipe</div>
-          <div style="font-size:13px; opacity:.6">Painel diário • semanal • entregas</div>
+          <h1>Agência Dipe</h1>
+          <small>Acesso ao painel do time</small>
         </div>
       </div>
-      <nav class="tabs" aria-label="Vistas">
-        <button class="tab active" data-view="daily">Diário</button>
-        <button class="tab" data-view="weekly">Semanal</button>
-        <button class="tab" data-view="deliveries">Entregas</button>
-      </nav>
-      <div class="seg">
-        <button class="btn secondary" id="btnNewTask">+ Nova tarefa</button>
-        <button class="btn secondary" id="btnExportCsv" title="Baixar CSV das tarefas">Exportar CSV</button>
-        $1
-        <button class="btn secondary" id="btnClients" title="Gerenciar clientes">Clientes</button>
-        <button class="btn secondary" id="btnCollabs" title="Gerenciar colaboradores">Colaboradores</button>
-        <label class="btn ghost" for="importFile" title="Importar JSON"><input type="file" id="importFile" accept="application/json" style="display:none">Importar</label>
-        <button class="btn" id="btnPrint">Imprimir relatório</button>
-        <button class="btn secondary" id="btnSBLogin" title="Entrar para sincronizar com a equipe">Entrar (time)</button>
-        <button class="btn ghost hidden" id="btnSBLogout" title="Sair da conta da equipe">Sair (time)</button>
-        <button class="btn ghost" id="btnLogout" title="Bloquear esta página">Bloquear página</button>
-      </div>
+      <div style="height:8px"></div>
+      <label for="email">E-mail corporativo</label>
+      <input id="email" type="email" placeholder="seu.nome@digitalparaempresas.com.br" />
+      <div style="height:8px"></div>
+      <button id="btnMagic" class="btn" style="width:100%">Enviar link de acesso</button>
+      <div class="msg" id="loginMsg"></div>
+      <div style="height:8px"></div>
+      <small>Somente contas <b>@digitalparaempresas.com.br</b> têm acesso. Após clicar no link recebido por e-mail, você já estará dentro.</small>
     </div>
+  </section>
 
-    <!-- Toolbar (filtros) -->
-    <div class="toolbar" role="region" aria-label="Filtros e pesquisa">
-      <div class="chip" title="Pesquisa">
-        <span class="icon">🔎</span>
-        <input type="text" id="q" placeholder="Pesquisar título/descrição…" />
+  <!-- APP (aparece quando autenticado) -->
+  <header id="appHeader" class="hidden">
+    <div class="container">
+      <div class="brand">
+        <div class="badge">D</div>
+        <div>
+          <div style="font-weight:700">Agência Dipe</div>
+          <small>Painel de tarefas</small>
+        </div>
       </div>
-      <div class="chip" title="Cliente">
-        <span>Cliente</span>
-        <select id="filterClient">
-          <option value="">Todos</option>
-          <option value="Matec">Matec</option>
-          <option value="Construcione">Construcione</option>
-          <option value="Vertticom">Vertticom</option>
-          <option value="LRocha">LRocha</option>
-        </select>
-      </div>
-      <div class="chip" title="Colaborador">
-        <span>Colaborador</span>
-        <select id="filterCollab"><option value="">Todos</option></select>
-      </div>
-      <div class="chip" title="Status">
-        <span>Status</span>
-        <select id="filterStatus">
-          <option value="">Todos</option>
-          <option>Backlog</option>
-          <option>A Fazer</option>
-          <option>Em Progresso</option>
-          <option>Concluído</option>
-        </select>
-      </div>
-      <div class="chip" id="dateGroupDaily">
-        <span>Dia</span>
-        <input type="date" id="dateDaily" />
-      </div>
-      <div class="chip hidden" id="dateGroupWeekly">
-        <span>Semana</span>
-        <input type="date" id="dateWeekly" title="Escolha um dia da semana"/>
-        <button class="btn ghost" id="btnThisWeek">Esta semana</button>
-      </div>
-      <div class="chip" title="Limpar filtros">
-        <button class="btn ghost" id="btnClear">Limpar</button>
-      </div>
+      <div class="grow"></div>
+      <button class="btn secondary" id="btnNew">+ Nova tarefa</button>
+      <button class="btn" id="btnExportCsv">Exportar CSV</button>
+      <button class="btn" id="btnExportJson">Backup JSON</button>
+      <label class="btn ghost" title="Importar JSON">
+        <input type="file" id="importJson" accept="application/json" style="display:none" />Importar
+      </label>
+      <button class="btn ghost" id="btnClients">Clientes</button>
+      <button class="btn ghost" id="btnCollabs">Colaboradores</button>
+      <button class="btn" id="btnPrint">Imprimir</button>
+      <button class="btn" id="btnLogout" title="Encerrar sessão">Sair (time)</button>
     </div>
   </header>
 
-  <!-- Stats -->
-  <section class="stats" aria-label="Indicadores rápidos">
-    <div class="stat"><h4>Hoje</h4><div class="v" id="statToday">0</div></div>
-    <div class="stat"><h4>Semana</h4><div class="v" id="statWeek">0</div></div>
-    <div class="stat"><h4>Backlog</h4><div class="v" id="statBacklog">0</div></div>
-    <div class="stat"><h4>Em progresso</h4><div class="v" id="statDoing">0</div></div>
-    <div class="stat"><h4>Concluído (semana)</h4><div class="v" id="statDone">0</div></div>
-    <div class="stat"><h4>Clientes ativos</h4><div class="v" id="statClients">0</div></div>
+  <section id="app" class="container hidden">
+    <div class="filters">
+      <div>
+        <label for="q">🔎 Pesquisar</label>
+        <input id="q" placeholder="título ou descrição" />
+      </div>
+      <div>
+        <label for="fClient">🏢 Cliente</label>
+        <select id="fClient"><option value="">Todos</option></select>
+      </div>
+      <div>
+        <label for="fCollab">👤 Colaborador</label>
+        <select id="fCollab"><option value="">Todos</option></select>
+      </div>
+      <div>
+        <label for="fStatus">🏷️ Status</label>
+        <select id="fStatus">
+          <option value="">Todos</option>
+          <option>A Fazer</option>
+          <option>Em Progresso</option>
+          <option>Concluído</option>
+          <option>Backlog</option>
+        </select>
+      </div>
+      <div>
+        <label for="fDate">🗓️ Data</label>
+        <input id="fDate" type="date" />
+      </div>
+      <div style="align-self:end"><button class="btn ghost" id="btnClear">Limpar</button></div>
+    </div>
+
+    <div class="board" id="board">
+      <div class="col" data-status="A Fazer"><h3>🗂️ A Fazer</h3><div class="list"></div></div>
+      <div class="col" data-status="Em Progresso"><h3>⚙️ Em Progresso</h3><div class="list"></div></div>
+      <div class="col" data-status="Concluído"><h3>✅ Concluído</h3><div class="list"></div></div>
+    </div>
+
+    <div style="height:18px"></div>
+    <table id="tbl" class="hidden">
+      <thead><tr><th>Tarefa</th><th>Cliente</th><th>Colaboradores</th><th>Status</th><th>Data</th><th>Atualizado</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
   </section>
 
-  <main class="wrap">
-    <!-- Board Diário -->
-    <section id="view-daily" class="board daily" aria-label="Quadro Diário">
-      <div class="col" data-status="A Fazer">
-        <div class="col-head"><div class="col-title">🗂️ A Fazer</div><span class="badge" id="count_todo">0</span></div>
-        <div class="drop" data-drop="daily"></div>
-      </div>
-      <div class="col" data-status="Em Progresso">
-        <div class="col-head"><div class="col-title">⚙️ Em Progresso</div><span class="badge" id="count_doing">0</span></div>
-        <div class="drop" data-drop="daily"></div>
-      </div>
-      <div class="col" data-status="Concluído">
-        <div class="col-head"><div class="col-title">✅ Concluído</div><span class="badge" id="count_done">0</span></div>
-        <div class="drop" data-drop="daily"></div>
-      </div>
-    </section>
-
-    <!-- Board Semanal -->
-    <section id="view-weekly" class="board weekly hidden" aria-label="Quadro Semanal"></section>
-
-    <!-- Entregas (tabela) -->
-    <section id="view-deliveries" class="hidden" aria-label="Lista de Entregas">
-      <div class="col" style="padding:0">
-        <div class="col-head"><div class="col-title">📦 Entregas & Tarefas</div><div class="col-actions"><button class="btn ghost" id="btnNewWeek">Iniciar semana limpa</button></div></div>
-        <div class="drop" style="padding:0">
-          <table id="tbl">
-            <thead>
-              <tr>
-                <th>Título</th>
-                <th>Cliente</th>
-                <th>Colaboradores</th>
-                <th>Status</th>
-                <th>Dia</th>
-                <th>Últ. alteração</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+  <!-- MODAL TAREFA -->
+  <template id="tplTaskModal">
+    <div class="panel" style="width:min(620px,94vw)">
+      <h1 id="taskTitle" style="font-size:18px;margin:0 0 8px">Nova tarefa</h1>
+      <div class="row" style="gap:10px">
+        <div style="flex:1">
+          <label>Título</label>
+          <input id="t_title" />
+        </div>
+        <div style="width:180px">
+          <label>Cliente</label>
+          <select id="t_client"></select>
+        </div>
+        <div style="width:180px">
+          <label>Status</label>
+          <select id="t_status">
+            <option>A Fazer</option>
+            <option>Em Progresso</option>
+            <option>Concluído</option>
+            <option>Backlog</option>
+          </select>
         </div>
       </div>
-    </section>
-  </main>
-
-  <!-- Modal Colaboradores -->
-  <div class="modal" id="collabsModal" aria-hidden="true" aria-labelledby="collabsTitle">
-    <div class="sheet">
-      <div class="sheet-h">
-        <strong id="collabsTitle">Colaboradores</strong>
-        <div>
-          <button class="btn ghost" id="btnAddCollab">+ Adicionar</button>
-          <button class="btn" id="btnSaveCollabs">Salvar</button>
+      <div class="row" style="gap:10px;margin-top:10px">
+        <div style="width:180px">
+          <label>Data</label>
+          <input id="t_date" type="date" />
+        </div>
+        <div class="grow">
+          <label>Colaboradores (separe por vírgula)</label>
+          <input id="t_collabs" list="dlCollabs" />
+          <datalist id="dlCollabs"></datalist>
         </div>
       </div>
-      <div class="sheet-b">
-        <div id="collabsList" style="display:grid; gap:10px"></div>
-        <div style="font-size:12px; opacity:.7; margin-top:8px">Os nomes aparecem nos filtros e como sugestões no campo de colaboradores da tarefa.</div>
+      <div style="margin-top:10px">
+        <label>Descrição</label>
+        <textarea id="t_desc" rows="4"></textarea>
+      </div>
+      <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px">
+        <button class="btn ghost" id="btnDel">Excluir</button>
+        <button class="btn" id="btnSave">Salvar</button>
       </div>
     </div>
-  </div>
+  </template>
 
-  <!-- Modal de Login do Time (Supabase) -->
-  <div class="modal" id="sbModal" aria-hidden="true" aria-labelledby="sbTitle">
-    <div class="sheet">
-      <div class="sheet-h">
-        <strong id="sbTitle">Entrar no time</strong>
-        <div></div>
-      </div>
-      <div class="sheet-b">
-        <div class="grid">
-          <div class="full filter-wrap">
-            <label for="sbEmail">E-mail corporativo</label>
-            <input type="email" id="sbEmail" placeholder="seunome@digitalparaempresas.com.br" required />
-          </div>
-          <div class="full">
-            <button class="btn" id="btnSendMagic">Enviar link de acesso</button>
-          </div>
-          <div class="full" style="font-size:12px;opacity:.7">Você receberá um e-mail com um link de acesso. Somente contas <code>@digitalparaempresas.com.br</code> entram no time.</div>
-        </div>
-        <div id="sbMsg" style="font-size:12px;color:#065f46;margin-top:10px"></div>
+  <!-- MODAL CLIENTES -->
+  <template id="tplClients">
+    <div class="panel" style="width:min(520px,94vw)">
+      <h1 style="font-size:18px;margin:0 0 8px">Clientes</h1>
+      <div id="clientsList"></div>
+      <div class="row" style="justify-content:space-between;margin-top:12px">
+        <button class="btn ghost" id="btnAddClient">+ Adicionar</button>
+        <button class="btn" id="btnSaveClients">Salvar</button>
       </div>
     </div>
-  </div>
-  </div>
+  </template>
 
-  <!-- Modal Nova/Editar Tarefa -->
-  <div class="modal" id="taskModal" aria-hidden="true" aria-labelledby="taskTitle">
-    <div class="sheet">
-      <div class="sheet-h">
-        <strong id="taskModalTitle">Nova tarefa</strong>
-        <div>
-          <button class="btn ghost" id="btnDeleteTask" title="Excluir">Excluir</button>
-          <button class="btn" id="btnSaveTask">Salvar</button>
-        </div>
-      </div>
-      <div class="sheet-b">
-        <div class="grid">
-          <div class="full">
-            <label for="f_title">Título</label>
-            <input type="text" id="f_title" placeholder="Ex.: Post LinkedIn Matec — Junho Vermelho" required>
-          </div>
-          <div>
-            <label for="f_client">Cliente</label>
-            <select id="f_client">
-              <option>Matec</option>
-              <option>Construcione</option>
-              <option>Vertticom</option>
-              <option>LRocha</option>
-            </select>
-          </div>
-          <div>
-            <label for="f_status">Status</label>
-            <select id="f_status">
-              <option>Backlog</option>
-              <option selected>A Fazer</option>
-              <option>Em Progresso</option>
-              <option>Concluído</option>
-            </select>
-          </div>
-          <div>
-            <label for="f_date">Dia</label>
-            <input type="date" id="f_date">
-          </div>
-          <div>
-            <label for="f_collabs">Colaboradores (separe por vírgula)</label>
-            <input type="text" id="f_collabs" list="dlCollabs"$1>
-            <datalist id="dlCollabs"></datalist>
-          </div>
-          <div class="full">
-            <label for="f_desc">Descrição</label>
-            <textarea id="f_desc" rows="4" placeholder="Detalhes, critérios de aceite, links…"></textarea>
-          </div>
-        </div>
+  <!-- MODAL COLABS -->
+  <template id="tplCollabs">
+    <div class="panel" style="width:min(520px,94vw)">
+      <h1 style="font-size:18px;margin:0 0 8px">Colaboradores</h1>
+      <div id="collabsList"></div>
+      <div class="row" style="justify-content:space-between;margin-top:12px">
+        <button class="btn ghost" id="btnAddCollab">+ Adicionar</button>
+        <button class="btn" id="btnSaveCollabs">Salvar</button>
       </div>
     </div>
-  </div>
+  </template>
 
   <script>
-(function(){
-  // sha256("dipe2025!") — troque o hash para mudar a senha
-  const PASS_HASH = "9c1be30472290f574e714090b73254428bd5c557c9a504349c7cf38ecb3c0681";
-  const KEY_SESSION = "dipe_auth";
-  const KEY_UNTIL   = "dipe_auth_until";
-  async function sha256(s){
-    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
-    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
-  }
-  function unlock(){
-    document.documentElement.classList.remove("locked");
-    const ls = document.getElementById("lockscreen"); if(ls) ls.remove();
-    window.__unlocked = true;
-  }
-  const until = parseInt(localStorage.getItem(KEY_UNTIL)||"0",10);
-  if (sessionStorage.getItem(KEY_SESSION)==="ok" || (until && Date.now()<until)) {
-    unlock();
-  } else {
-    window.addEventListener("DOMContentLoaded", ()=>{
-      const ls = document.getElementById("lockscreen"); if(ls) ls.style.display = "flex";
-      const form = document.getElementById("lock-form");
-      if(form) form.addEventListener("submit", async (e)=>{
-        e.preventDefault();
-        const pwd = document.getElementById("lock-pass").value;
-        const remember = document.getElementById("lock-remember").checked;
-        const hash = await sha256(pwd);
-        if(hash === PASS_HASH){
-          sessionStorage.setItem(KEY_SESSION,"ok");
-          if(remember){ localStorage.setItem(KEY_UNTIL, String(Date.now()+7*24*60*60*1000)); }
-          unlock();
-        } else {
-          const err = document.getElementById("lock-error"); if(err) err.textContent = "Senha incorreta";
-        }
-      });
-    });
-  }
-  window.logout = function(){ sessionStorage.removeItem(KEY_SESSION); localStorage.removeItem(KEY_UNTIL); location.reload(); };
-})();
-</script>
+  // ====== CONFIG ======
+  const TEAM = 'dipe';
+  const DOMAIN = '@digitalparaempresas.com.br';
+  const SUPABASE_URL = 'https://agvlectfxflbdccklesk.supabase.co'; // ok com seu Project ID
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndmxlY3RmeGZsYmRjY2tsZXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczODA5MzUsImV4cCI6MjA3Mjk1NjkzNX0.lN-cwvX7t3BRLQdQ3ylmb__Ux7y9Zaa1dBp6x7vSKyI';// ⬅️ COLE sua anon public aqui
 
-<script>
-// === SUPABASE — Configuração e helpers ===
-const SUPABASE_URL = 'https://agvlectfxflbdccklesk.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndmxlY3RmeGZsYmRjY2tsZXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczODA5MzUsImV4cCI6MjA3Mjk1NjkzNX0.lN-cwvX7t3BRLQdQ3ylmb__Ux7y9Zaa1dBp6x7vSKyI';
-const TEAM = 'dipe';
-const sb = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
-let isAuthed = false, rtChannel = null;
+  // ====== STATE ======
+  let sb = (SUPABASE_URL && SUPABASE_ANON_KEY) ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+  let tasks = [];
+  let clients = JSON.parse(localStorage.getItem('dipe_clients')||'null') || [
+    {name:'Matec', color:'#02d1ce', text:'#0a0a0a'},
+    {name:'Construcione', color:'#000000', text:'#ffffff'},
+    {name:'Vertticom', color:'#d67a59', text:'#ffffff'},
+    {name:'LRocha', color:'#7b1e2b', text:'#ffffff'}
+  ];
+  let collabs = JSON.parse(localStorage.getItem('dipe_collabs')||'null') || ['Camila','Alinne'];
 
-function toggleAuthBtns(on){
-  const inBtn = document.getElementById('btnSBLogin');
-  const outBtn = document.getElementById('btnSBLogout');
-  if(!inBtn||!outBtn) return;
-  inBtn.classList.toggle('hidden', !!on);
-  outBtn.classList.toggle('hidden', !on);
-}
-
-async function bootAuth(){
-  if(!sb) return;
-  const { data:{ session } } = await sb.auth.getSession();
-  isAuthed = !!session; toggleAuthBtns(isAuthed);
-  if(isAuthed){ await syncFromDB(); setupRealtime(); }
-  sb.auth.onAuthStateChange(async (_evt, session)=>{
-    isAuthed = !!session; toggleAuthBtns(isAuthed);
-    if(isAuthed){ await syncFromDB(); setupRealtime(); } else { if(rtChannel){ sb.removeChannel(rtChannel); rtChannel=null; } }
-  });
-  document.getElementById('btnSBLogin')?.addEventListener('click', ()=>{
-    if(!SUPABASE_URL || SUPABASE_URL.includes('YOUR-PROJECT') || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.includes('YOUR-ANON-KEY')){
-      alert('Acesso do time indisponível: configure SUPABASE_URL e SUPABASE_ANON_KEY.');
-      return;
-    }
-    const m = document.getElementById('sbModal');
-    m.classList.add('show'); m.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
-    const close = (e)=>{ if(e.target===m){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); document.body.style.overflow='auto'; } };
-    m.addEventListener('click', close, { once:true });
-  });
-  document.getElementById('btnSendMagic')?.addEventListener('click', async ()=>{
-    const email = document.getElementById('sbEmail').value.trim();
-    if(!email) { alert('Digite seu e-mail.'); return; }
-    if(!email.endsWith('@digitalparaempresas.com.br')){ alert('Use um e-mail @digitalparaempresas.com.br'); return; }
-    const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href } });
-    const msg = document.getElementById('sbMsg');
-    if(error){ msg.style.color='#b91c1c'; msg.textContent = 'Erro: '+error.message; }
-    else { msg.style.color='#065f46'; msg.textContent = 'Enviamos um link de acesso para '+email+'. Abra o e-mail e clique no link.'; }
-  });
-      return;
-    }
-    const m = document.getElementById('sbModal');
-    m.classList.add('show'); m.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
-    const close = (e)=>{ if(e.target===m){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); document.body.style.overflow='auto'; } };
-    m.addEventListener('click', close, { once:true });
-  });
-  document.getElementById('btnSendMagic')?.addEventListener('click', async ()=>{
-    const email = document.getElementById('sbEmail').value.trim();
-    if(!email) { alert('Digite seu e-mail.'); return; }
-    if(!email.endsWith('@digitalparaempresas.com.br')){ alert('Use um e-mail @digitalparaempresas.com.br'); return; }
-    const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href } });
-    const msg = document.getElementById('sbMsg');
-    if(error){ msg.style.color='#b91c1c'; msg.textContent = 'Erro: '+error.message; }
-    else { msg.style.color='#065f46'; msg.textContent = 'Enviamos um link de acesso para '+email+'. Abra o e-mail e clique no link.'; }
-  });
-    alert(error ? ('Erro: '+error.message) : 'Enviamos um link de acesso para seu e-mail.');
-  });
-  document.getElementById('btnSBLogout')?.addEventListener('click', async ()=>{ await sb.auth.signOut(); });
-}
-
-async function syncFromDB(){
-  if(!sb) return;
-  const { data, error } = await sb.from('tasks').select('*').eq('team', TEAM).order('updated', { ascending:false });
-  if(error){ console.error(error); return; }
-  state.tasks = data||[];
-  state.collabs = Array.from(new Set(state.tasks.flatMap(t=>t.collabs||[])));
-  document.getElementById('filterCollab').innerHTML = '<option value="">Todos</option>' + state.collabs.map(c=>`<option>${c}</option>`).join('');
-  render();
-}
-
-function setupRealtime(){
-  if(!sb) return; if(rtChannel){ sb.removeChannel(rtChannel); }
-  rtChannel = sb.channel('public:tasks').on('postgres_changes', { event:'*', schema:'public', table:'tasks' }, (payload)=>{
-    const row = payload.new || payload.old; if(!row || row.team!==TEAM) return;
-    if(payload.eventType==='INSERT' || payload.eventType==='UPDATE'){
-      const i = state.tasks.findIndex(x=>x.id===row.id); if(i>=0) state.tasks[i]=row; else state.tasks.unshift(row);
-    } else if(payload.eventType==='DELETE'){
-      state.tasks = state.tasks.filter(x=>x.id!==row.id);
-    }
-    state.collabs = Array.from(new Set(state.tasks.flatMap(t=>t.collabs||[])));
-    document.getElementById('filterCollab').innerHTML = '<option value="">Todos</option>' + state.collabs.map(c=>`<option>${c}</option>`).join('');
-    render();
-  }).subscribe();
-}
-
-async function dbInsert(t){
-  const payload = { title:t.title, client:t.client, status:t.status, date: t.date||null, collabs:t.collabs, desc:t.desc, team: TEAM };
-  const { data, error } = await sb.from('tasks').insert(payload).select().single();
-  if(error){ alert('Erro ao salvar: '+error.message); return null; }
-  return data;
-}
-async function dbUpdate(t){
-  const payload = { title:t.title, client:t.client, status:t.status, date: t.date||null, collabs:t.collabs, desc:t.desc, updated: new Date().toISOString() };
-  const { data, error } = await sb.from('tasks').update(payload).eq('id', t.id).select().single();
-  if(error){ alert('Erro ao atualizar: '+error.message); return null; }
-  return data;
-}
-async function dbDelete(id){
-  const { error } = await sb.from('tasks').delete().eq('id', id);
-  if(error){ alert('Erro ao excluir: '+error.message); }
-}
-
-bootAuth();
-
-  // ===== Rótulos/Ícones nos filtros do topo =====
-  (function enhanceFilters(){
-    function wrapWithLabel(id, label){
-      const el = document.getElementById(id); if(!el) return;
-      if(el.closest('.filter-wrap')) return;
-      const w=document.createElement('div'); w.className='filter-wrap';
-      const l=document.createElement('label'); l.setAttribute('for', id); l.textContent = label;
-      const parent=el.parentNode; parent.insertBefore(w, el); w.appendChild(l); w.appendChild(el);
-    }
-    wrapWithLabel('q','🔎 Pesquisar');
-    wrapWithLabel('filterClient','🏢 Cliente');
-    wrapWithLabel('filterCollab','👤 Colaborador');
-    wrapWithLabel('filterStatus','🏷️ Status');
-    wrapWithLabel('dateDaily','🗓️ Data');
-    wrapWithLabel('dateWeekly','🗓️ Semana');
-  })();
-
-  // ===== UX do overlay: priorizar login por e-mail do time e esconder senha por padrão
-  (function(){
-    const ls = document.getElementById('lockscreen'); if(!ls) return;
-    const panel = ls.querySelector('.panel');
-    const title = panel.querySelector('#ls-title'); if(title) title.textContent='Acesso ao painel';
-    const form = panel.querySelector('#lock-form');
-    // move bloco de e-mail (se existir) para cima do formulário de senha
-    const emailInput = panel.querySelector('#lock-email');
-    if(emailInput && form){ panel.insertBefore(emailInput.parentElement.parentElement ?? emailInput.parentElement, form); }
-    // esconder senha por padrão, com link "Sou admin"
-    if(form){
-      const toggle = document.createElement('button'); toggle.type='button'; toggle.className='btn ghost'; toggle.textContent='Sou admin (entrar com senha)'; toggle.style.margin='8px 0 0';
-      const wrap = document.createElement('div'); wrap.style.marginTop='6px'; wrap.appendChild(toggle);
-      form.style.display='none'; panel.appendChild(wrap);
-      toggle.onclick=()=>{ form.style.display = form.style.display==='none' ? 'block':'none'; };
-    }
-  })();
-
-  // ===== Gerenciar Colaboradores =====
-  function rebuildCollabsUI(){
-    const fc = document.getElementById('filterCollab'); if(fc){ fc.innerHTML = '<option value="">Todos</option>' + (state.collabs||[]).map(c=>`<option>${c}</option>`).join(''); }
-    const dl = document.getElementById('dlCollabs'); if(dl){ dl.innerHTML = (state.collabs||[]).map(c=>`<option value="${c}"></option>`).join(''); }
-  }
-  document.getElementById('btnCollabs')?.addEventListener('click', ()=>{
-    const m=document.getElementById('collabsModal'); const list=m.querySelector('#collabsList'); list.innerHTML='';
-    (state.collabs||[]).forEach(addRow);
-    m.classList.add('show'); m.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
-    m.onclick=(e)=>{ if(e.target===m){ close(); } };
-    m.querySelector('#btnAddCollab').onclick=()=> addRow('');
-    m.querySelector('#btnSaveCollabs').onclick=()=>{
-      const names = Array.from(list.querySelectorAll('input')).map(i=>i.value.trim()).filter(Boolean);
-      state.collabs = Array.from(new Set(names)).sort((a,b)=>a.localeCompare(b));
-      save(); rebuildCollabsUI(); render(); close();
-    };
-    function addRow(name){ const r=document.createElement('div'); r.className='client-row'; r.innerHTML=`<input type="text" placeholder="Nome do colaborador" value="${name||''}"><span></span><button class="del">🗑️</button>`; r.querySelector('.del').onclick=()=>r.remove(); list.appendChild(r);} 
-    function close(){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); document.body.style.overflow='auto'; }
-  });
-  rebuildCollabsUI();
-
-  // Desbloquear overlay automaticamente quando o usuário do time autenticar
-  (async function(){
-    try{
-      if(sb){ const { data:{ session } } = await sb.auth.getSession(); if(session && document.documentElement.classList.contains('locked')){ if(window.unlock) window.unlock(); }}
-      if(sb) sb.auth.onAuthStateChange((_evt, session)=>{ if(session && document.documentElement.classList.contains('locked')){ if(window.unlock) window.unlock(); }});
-    }catch(e){}
-  })();
-</script>
-
-<script>
-  const $ = (sel, el=document) => el.querySelector(sel);
-  const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
-  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '';
-  const todayISO = () => new Date().toISOString().slice(0,10);
-  const mondayOf = (iso) => { const d=new Date(iso||todayISO()); const day = (d.getDay()+6)%7; d.setDate(d.getDate()-day); return d.toISOString().slice(0,10)}; // segunda
-  const addDays = (iso, n) => { const d=new Date(iso); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10)};
-  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16)}));
-
-  // ===== Estado =====
-  const STORAGE_KEY = 'dipe_board_v1';
-  let state = load() || { tasks: [], collabs: ['Camila','Alinne'], last: Date.now() };
-  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  function load(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)); }catch(e){ return null } }
-
-  // ===== Clientes / Cores =====
-  const CLIENTS = {
-    Matec: { color: getComputedStyle(document.documentElement).getPropertyValue('--matec').trim(), text:'#0a0a0a' },
-    Construcione: { color: getComputedStyle(document.documentElement).getPropertyValue('--construcione').trim(), text:'#ffffff' },
-    Vertticom: { color: getComputedStyle(document.documentElement).getPropertyValue('--vertticom').trim(), text:'#ffffff' },
-    LRocha: { color: getComputedStyle(document.documentElement).getPropertyValue('--lrocha').trim(), text:'#ffffff' }
-  };
-
-  // ===== Init UI =====
-  const dateDaily = $('#dateDaily');
-  const dateWeekly = $('#dateWeekly');
-  dateDaily.value = todayISO();
-  dateWeekly.value = todayISO();
-  $('#filterCollab').innerHTML = '<option value="">Todos</option>' + state.collabs.map(c=>`<option>${c}</option>`).join('');
-
-  // Tabs
-  $$('.tab').forEach(t=> t.addEventListener('click', ()=>{
-    $$('.tab').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
-    const v = t.dataset.view;
-    $('#view-daily').classList.toggle('hidden', v!=='daily');
-    $('#view-weekly').classList.toggle('hidden', v!=='weekly');
-    $('#view-deliveries').classList.toggle('hidden', v!=='deliveries');
-    $('#dateGroupDaily').classList.toggle('hidden', v!=='daily');
-    $('#dateGroupWeekly').classList.toggle('hidden', v!=='weekly');
-    render();
-  }));
-
-  // Botões topo
-  $('#btnNewTask').addEventListener('click', ()=> openTaskModal());
-  $('#btnExportCsv').addEventListener('click', exportCSV);
-  $('#btnExportJson').addEventListener('click', exportJSON);
-  $('#btnPrint').addEventListener('click', ()=> window.print());
-  $('#btnClear').addEventListener('click', ()=>{ $('#q').value=''; $('#filterClient').value=''; $('#filterCollab').value=''; $('#filterStatus').value=''; render(); })
-  $('#btnThisWeek').addEventListener('click', ()=>{ dateWeekly.value = todayISO(); render(); })
-  $('#btnNewWeek').addEventListener('click', startCleanWeek);
-  $('#importFile').addEventListener('change', importJSON);
-  document.getElementById('btnLogout')?.addEventListener('click', ()=>{ if(confirm('Sair da sessão?')) window.logout(); });
-
-  // Filtros
-  ;['q','filterClient','filterCollab','filterStatus','dateDaily','dateWeekly'].forEach(id=>{
-    document.getElementById(id).addEventListener('input', render)
-  })
-
-  // ===== CRUD Tarefas =====
-  function openTaskModal(task){
-    const m = $('#taskModal');
-    m.classList.add('show');
-    m.setAttribute('aria-hidden','false');
-    document.body.style.overflow='hidden';
-
-    $('#btnDeleteTask').style.display = task? 'inline-flex':'none';
-    $('#taskModalTitle').textContent = task? 'Editar tarefa' : 'Nova tarefa';
-
-    // Preencher
-    $('#f_title').value = task?.title || '';
-    $('#f_client').value = task?.client || 'Matec';
-    $('#f_status').value = task?.status || 'A Fazer';
-    $('#f_date').value = task?.date || todayISO();
-    $('#f_collabs').value = (task?.collabs||[]).join(', ');
-    $('#f_desc').value = task?.desc || '';
-
-    const close = (e)=>{ if(e.target===m) hide() };
-    m.addEventListener('click', close, { once:true });
-
-    $('#btnSaveTask').onclick = async () => {
-      const t = {
-        id: task?.id || undefined,
-        title: $('#f_title').value.trim(),
-        client: $('#f_client').value,
-        status: $('#f_status').value,
-        date: $('#f_date').value,
-        collabs: $('#f_collabs').value.split(',').map(s=>s.trim()).filter(Boolean),
-        desc: $('#f_desc').value.trim(),
-        updated: Date.now()
-      };
-      if(!t.title) { alert('Dê um título à tarefa.'); return }
-      t.collabs.forEach(c=>{ if(!state.collabs.includes(c)) state.collabs.push(c) });
-      $('#filterCollab').innerHTML = '<option value="">Todos</option>' + state.collabs.map(c=>`<option>${c}</option>`).join('');
-
-      if(isAuthed && sb){
-        if(t.id){
-          const row = await dbUpdate(t); if(row){ const i=state.tasks.findIndex(x=>x.id===row.id); if(i>=0) state.tasks[i]=row; else state.tasks.unshift(row); }
-        } else {
-          const row = await dbInsert(t); if(row){ state.tasks.unshift(row); }
-        }
-      } else {
-        if(!t.id) t.id = uid();
-        const idx = state.tasks.findIndex(x=>x.id===t.id);
-        if(idx>=0) state.tasks[idx]=t; else state.tasks.push(t);
-        save();
-      }
-      render(); hide();
-    };
-    $('#btnDeleteTask').onclick = async () => {
-      if(task && confirm('Excluir esta tarefa?')){
-        if(isAuthed && sb){ await dbDelete(task.id); } else {
-          state.tasks = state.tasks.filter(x=>x.id!==task.id); save();
-        }
-        render(); hide();
-      }
-    }
-
-    function hide(){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); document.body.style.overflow='auto'; }
-  }
-
-  // ===== Filtros e renderização =====
-  function filteredTasks(){
-    const q = $('#q').value.trim().toLowerCase();
-    const fc = $('#filterClient').value; const fco = $('#filterCollab').value; const fs = $('#filterStatus').value;
-    return state.tasks.filter(t=>{
-      const matchesQ = !q || (t.title+t.desc).toLowerCase().includes(q);
-      const matchesC = !fc || t.client===fc;
-      const matchesCo = !fco || (t.collabs||[]).includes(fco);
-      const matchesS = !fs || t.status===fs;
-      return matchesQ && matchesC && matchesCo && matchesS;
-    });
-  }
-
-  function render(){
-    const list = filteredTasks();
-    renderStats(list);
-
-    // Diário
-    const d = $('#view-daily');
-    if(!d.classList.contains('hidden')){
-      const day = $('#dateDaily').value || todayISO();
-      const tasks = list.filter(t=> (t.date||'')===day && t.status!=='Backlog');
-      const todo = tasks.filter(t=>t.status==='A Fazer');
-      const doing = tasks.filter(t=>t.status==='Em Progresso');
-      const done = tasks.filter(t=>t.status==='Concluído');
-      d.querySelectorAll('.drop').forEach(el=> el.innerHTML='');
-      renderCards(d.querySelector('[data-status="A Fazer"] .drop'), todo, 'daily');
-      renderCards(d.querySelector('[data-status="Em Progresso"] .drop'), doing, 'daily');
-      renderCards(d.querySelector('[data-status="Concluído"] .drop'), done, 'daily');
-      $('#count_todo').textContent=todo.length; $('#count_doing').textContent=doing.length; $('#count_done').textContent=done.length;
-    }
-
-    // Semanal
-    const w = $('#view-weekly');
-    if(!w.classList.contains('hidden')){
-      const anyDay = $('#dateWeekly').value || todayISO();
-      const mon = mondayOf(anyDay);
-      w.innerHTML='';
-      for(let i=0;i<7;i++){
-        const day = addDays(mon,i);
-        const dayTasks = list.filter(t=> (t.date||'')===day && t.status!=='Backlog');
-        const name = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'][i];
-        const col = document.createElement('div'); col.className='col'; col.dataset.day = day;
-        col.innerHTML = `<div class="col-head"><div class="col-title">📅 ${name} <span class="pill" style="margin-left:8px">${fmtDate(day)}</span></div><span class="badge">${dayTasks.length}</span></div><div class="drop" data-drop="weekly"></div>`;
-        w.appendChild(col);
-        renderCards($('.drop', col), dayTasks, 'weekly');
-      }
-    }
-
-    // Entregas
-    const e = $('#view-deliveries');
-    if(!e.classList.contains('hidden')){
-      const tbody = $('#tbl tbody');
-      tbody.innerHTML='';
-      list.sort((a,b)=> (a.date||'').localeCompare(b.date||''));
-      for(const t of list){
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${escapeHtml(t.title)}</strong><div style="opacity:.7;font-size:12px;margin-top:4px">${escapeHtml(t.desc||'')}</div></td>
-          <td>${clientTag(t.client)}</td>
-          <td>${(t.collabs||[]).map(c=>avatarHTML(c)).join(' ')}</td>
-          <td><span class="badge">${t.status}</span></td>
-          <td>${fmtDate(t.date||'')}</td>
-          <td>${new Date(t.updated||Date.now()).toLocaleString('pt-BR')}</td>
-          <td><button class="btn ghost" data-edit="${t.id}">Editar</button></td>`;
-        tbody.appendChild(tr);
-      }
-      // editar
-      $$('button[data-edit]').forEach(b=> b.addEventListener('click', ()=>{
-        const t = state.tasks.find(x=>x.id===b.dataset.edit); openTaskModal(t);
-      }))
-    }
-
-    // DnD listeners
-    $$('.drop').forEach(drop=>{
-      drop.ondragover = (e)=>{ e.preventDefault(); drop.style.background='#faf9f4' };
-      drop.ondragleave = ()=> drop.style.background='';
-      drop.ondrop = (e)=>{
-        e.preventDefault(); drop.style.background='';
-        const id = e.dataTransfer.getData('text/plain');
-        const task = state.tasks.find(t=>t.id===id); if(!task) return;
-        const parentCol = drop.closest('.col');
-        if(drop.dataset.drop==='daily'){
-          task.status = parentCol.dataset.status;
-          task.date = $('#dateDaily').value || todayISO();
-        }else{
-          task.date = parentCol.dataset.day;
-        }
-        task.updated = Date.now(); save(); render();
-      }
-    })
-  }
-
-  function renderCards(container, items, mode){
-    for(const t of items){ container.appendChild(cardHTML(t, mode)); }
-  }
-
-  function cardHTML(t, mode){
-    const card = document.createElement('article');
-    card.className='card'; card.draggable=true; card.id = 'card_'+t.id; card.dataset.id = t.id;
-    card.addEventListener('dragstart', (e)=>{ card.classList.add('dragging'); e.dataTransfer.setData('text/plain', t.id) });
-    card.addEventListener('dragend', ()=> card.classList.remove('dragging'));
-    card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
-        <div style="flex:1; min-width:0">
-          <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px">
-            ${clientTag(t.client)}
-            ${t.status==='Backlog'?'<span class="badge">Backlog</span>':''}
-          </div>
-          <div style="font-weight:700; line-height:1.35">${escapeHtml(t.title)}</div>
-          ${t.desc?`<div style="opacity:.75; font-size:12px; margin-top:4px">${escapeHtml(t.desc)}</div>`:''}
-        </div>
-        <button class="btn ghost" style="padding:6px 8px" data-quickedit="${t.id}" title="Editar">✏️</button>
-      </div>
-      <div class="meta">
-        <div class="avatars">${(t.collabs||[]).map(c=>avatarHTML(c)).join('')}</div>
-        ${mode==='weekly'?`<span class="badge">${fmtDate(t.date||'')}</span>`:''}
-      </div>`;
-    // click -> editar
-    $('[data-quickedit]', card).addEventListener('click', ()=> openTaskModal(t));
-    return card;
-  }
-
+  // ====== HELPERS ======
+  const $ = sel => document.querySelector(sel);
   function clientTag(name){
-    const c = CLIENTS[name]||{color:'#999', text:'#111'};
-    const style = `background:${c.color}; color:${c.text}`;
-    return `<span class="tag" style="${style}"><span class="dot" style="background:#fff; opacity:.9"></span>${name}</span>`
+    const c = clients.find(x=>x.name===name) || {color:'#ddd', text:'#111'};
+    return `<span class="tag" style="background:${c.color};color:${c.text}">${name}</span>`;
   }
+  function csvEscape(s){return '"'+String(s||'').replaceAll('"','""')+'"';}
+  function fmtDate(d){if(!d) return ''; const p=d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`}
 
-  function avatarHTML(name){
-    const initials = (name||'?').split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase();
-    const hue = [...(name||'a')].reduce((a,c)=>a+c.charCodeAt(0),0)%360;
-    const bg = `hsl(${hue} 60% 40%)`;
-    return `<span class="avatar" title="${name}" style="background:${bg}">${initials}</span>`
+  // ====== AUTH ======
+  async function checkAuth(){
+    if(!sb){ $('#loginMsg').style.color='#b91c1c'; $('#loginMsg').textContent='Configure o Supabase (URL e Anon Key) no index.html.'; return; }
+    const { data:{ session } } = await sb.auth.getSession();
+    if(session){ showApp(); } else { showLogin(); }
+    sb.auth.onAuthStateChange((_evt, session)=>{ if(session) showApp(); });
   }
+  function showLogin(){ $('#login').classList.remove('hidden'); $('#appHeader').classList.add('hidden'); $('#app').classList.add('hidden'); }
+  function showApp(){ $('#login').classList.add('hidden'); $('#appHeader').classList.remove('hidden'); $('#app').classList.remove('hidden'); load(); }
 
-  function renderStats(list){
-    const day = $('#dateDaily').value || todayISO();
-    const anyDay = $('#dateWeekly').value || todayISO();
-    const mon = mondayOf(anyDay); const sun = addDays(mon,6);
-    const inWeek = list.filter(t=> t.date && t.date>=mon && t.date<=sun);
+  // ====== DATA (Supabase) ======
+  async function load(){
+    if(!sb) return; const { data, error } = await sb.from('tasks').select('*').eq('team', TEAM).order('updated', {ascending:false});
+    if(error){ console.error(error); return; }
+    tasks = data||[]; render(); buildFilters(); }
+  async function dbInsert(t){const {data,error}=await sb.from('tasks').insert(t).select().single(); if(error){alert('Erro ao salvar: '+error.message);return null;} return data;}
+  async function dbUpdate(t){const {data,error}=await sb.from('tasks').update(t).eq('id',t.id).select().single(); if(error){alert('Erro ao atualizar: '+error.message);return null;} return data;}
+  async function dbDelete(id){const {error}=await sb.from('tasks').delete().eq('id',id); if(error) alert('Erro ao excluir: '+error.message);}
 
-    $('#statToday').textContent = list.filter(t=>t.date===day && t.status!=='Backlog').length;
-    $('#statWeek').textContent = inWeek.length;
-    $('#statBacklog').textContent = list.filter(t=>t.status==='Backlog').length;
-    $('#statDoing').textContent = list.filter(t=>t.status==='Em Progresso').length;
-    $('#statDone').textContent = inWeek.filter(t=>t.status==='Concluído').length;
-    $('#statClients').textContent = new Set(list.map(t=>t.client)).size;
+  // ====== RENDER ======
+  function buildFilters(){
+    $('#fClient').innerHTML = '<option value="">Todos</option>'+clients.map(c=>`<option>${c.name}</option>`).join('');
+    $('#fCollab').innerHTML = '<option value="">Todos</option>'+Array.from(new Set(collabs)).map(c=>`<option>${c}</option>`).join('');
+    $('#dlCollabs').innerHTML = Array.from(new Set(collabs)).map(c=>`<option value="${c}"></option>`).join('');
   }
-
-  // ===== Export / Import =====
-  function exportCSV(){
-    const list = filteredTasks();
-    const cols = ['id','titulo','cliente','colaboradores','status','data','descricao','atualizado_em'];
-    const csv = [cols.join(';')].concat(list.map(t=>[
-      t.id,
-      escCSV(t.title),
-      t.client,
-      escCSV((t.collabs||[]).join(',')),
-      t.status,
-      t.date||'',
-      escCSV(t.desc||''),
-      new Date(t.updated||Date.now()).toLocaleString('pt-BR')
-    ].join(';'))).join('\n');
-    download(csv, `dipe-relatorio-${Date.now()}.csv`, 'text/csv');
+  function filtered(){
+    const q = $('#q').value.toLowerCase().trim();
+    const fc=$('#fClient').value, fco=$('#fCollab').value, fs=$('#fStatus').value, fd=$('#fDate').value;
+    return tasks.filter(t=>{
+      const mQ=!q || (t.title+t.desc).toLowerCase().includes(q);
+      const mC=!fc || t.client===fc; const mCo=!fco || (t.collabs||[]).includes(fco); const mS=!fs || t.status===fs; const mD=!fd || (t.date||'')===fd;
+      return mQ&&mC&&mCo&&mS&&mD; });
   }
-  function exportJSON(){ download(JSON.stringify(state,null,2), `dipe-backup-${Date.now()}.json`, 'application/json') }
-  function importJSON(e){
-    const f = e.target.files[0]; if(!f) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try{
-        const data = JSON.parse(reader.result);
-        if(!data.tasks) throw new Error('Arquivo inválido');
-        state = data; save(); $('#filterCollab').innerHTML = '<option value="">Todos</option>' + state.collabs.map(c=>`<option>${c}</option>`).join(''); render();
-        alert('Importação concluída!');
-      }catch(err){ alert('Falha ao importar: '+err.message) }
-    };
-    reader.readAsText(f);
-  }
-  function download(content, filename, mime){
-    const blob = new Blob([content], {type:mime});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  // ===== Semana limpa =====
-  function startCleanWeek(){
-    if(!confirm('Criar semana limpa (mantém backlog, remove datas e status de concluído)?')) return;
-    state.tasks = state.tasks.map(t=>{
-      if(t.status==='Concluído'){ return t } // mantém histórico concluído
-      return { ...t, date:'', status: t.status==='Backlog' ? 'Backlog' : 'A Fazer', updated: Date.now() };
-    });
-    save(); render();
-  }
-
-  // ===== Helpers =====
-  function escCSV(s){ return '"'+String(s).replaceAll('"','""')+'"' }
-  function escapeHtml(s){ return String(s).replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])) }
-
-  // ===== Semeadura opcional =====
-  if(state.tasks.length===0){
-    // Comece vazio; se quiser, descomente a seguir para exemplos
-    // state.tasks.push({id:uid(), title:'Exemplo — Post LinkedIn', client:'Matec', status:'A Fazer', date:todayISO(), collabs:['Camila'], desc:'Legenda + arte', updated:Date.now()});
-    save();
-  }
-
-  // Estado inicial — render
-  render();
-  </script>
-  
-  <!-- ===== Clientes: estilos leves ===== -->
-  <style>
-    .client-row{display:grid;grid-template-columns:1fr 120px 40px;gap:10px;align-items:center}
-    .client-row input[type="text"]{width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--muted)}
-    .client-row input[type="color"]{width:100%;height:38px;border:none;background:transparent}
-    .client-row .del{appearance:none;border:1px solid var(--muted);background:#fff;border-radius:10px;height:38px;cursor:pointer}
-  </style>
-
-  <!-- ===== Modal de Clientes ===== -->
-  <div class="modal" id="clientsModal" aria-hidden="true" aria-labelledby="clientsTitle" style="display:none"></div>
-
-  <script>
-  // ===== Extensões: Clientes dinâmicos + login por e-mail no overlay =====
-  (function(){
-    // --- defaults de clientes
-    const DEFAULT_CLIENTS=[
-      {name:'Matec', color:'#02d1ce', text:'#0a0a0a'},
-      {name:'Construcione', color:'#000000', text:'#ffffff'},
-      {name:'Vertticom', color:'#d67a59', text:'#ffffff'},
-      {name:'LRocha', color:'#7b1e2b', text:'#ffffff'}
-    ];
-
-    // --- garantir state.clients
-    if(!window.state) window.state={};
-    if(!Array.isArray(window.state.clients) || window.state.clients.length===0){
-      try{ const saved = JSON.parse(localStorage.getItem('dipe_board_v1')||'null'); if(saved && Array.isArray(saved.clients)) window.state.clients=saved.clients; }catch(e){}
-      if(!Array.isArray(window.state.clients) || window.state.clients.length===0){ window.state.clients = DEFAULT_CLIENTS.slice(); }
-      if(typeof save==='function'){ try{ save(); }catch(e){} }
+  function render(){
+    const arr = filtered();
+    const colTodo = document.querySelector('[data-status="A Fazer"] .list');
+    const colDoing = document.querySelector('[data-status="Em Progresso"] .list');
+    const colDone = document.querySelector('[data-status="Concluído"] .list');
+    colTodo.innerHTML = colDoing.innerHTML = colDone.innerHTML = '';
+    for(const t of arr){
+      if(t.status==='Backlog') continue;
+      const el = document.createElement('div'); el.className='card'; el.innerHTML = `
+        <div class="row">
+          <strong class="grow">${t.title}</strong>
+          ${clientTag(t.client)}
+        </div>
+        <div style="font-size:12px;opacity:.8;margin-top:6px">${(t.collabs||[]).join(', ')}</div>
+        ${t.date?`<div style="font-size:12px;opacity:.7;margin-top:4px">${fmtDate(t.date)}</div>`:''}
+        <div class="row" style="justify-content:flex-end;margin-top:8px;gap:8px">
+          <select data-act="status">
+            <option ${t.status==='A Fazer'?'selected':''}>A Fazer</option>
+            <option ${t.status==='Em Progresso'?'selected':''}>Em Progresso</option>
+            <option ${t.status==='Concluído'?'selected':''}>Concluído</option>
+            <option ${t.status==='Backlog'?'selected':''}>Backlog</option>
+          </select>
+          <button class="btn ghost" data-act="edit">Editar</button>
+        </div>`;
+      el.querySelector('[data-act="edit"]').onclick=()=> openTask(t);
+      el.querySelector('[data-act="status"]').onchange=async (e)=>{ t.status=e.target.value; t.updated=new Date().toISOString(); const row=await dbUpdate(t); if(row){ const i=tasks.findIndex(x=>x.id===row.id); tasks[i]=row; render(); }}
+      if(t.status==='A Fazer') colTodo.appendChild(el); else if(t.status==='Em Progresso') colDoing.appendChild(el); else colDone.appendChild(el);
     }
 
-    // --- helper
-    function pickText(hex){ try{ const c=hex.replace('#',''); const r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16); const yiq=((r*299)+(g*587)+(b*114))/1000; return yiq>=128?'#0a0a0a':'#ffffff'; }catch(e){ return '#111'; } }
-
-    // --- sobrescrever clientTag para usar paleta dinâmica
-    window.clientTag = function(name){
-      const c = (window.state.clients||DEFAULT_CLIENTS).find(x=>x.name===name) || {color:'#999', text:'#111'};
-      return `<span class="tag" style="background:${c.color};color:${c.text}"><span class="dot" style="background:#fff;opacity:.9"></span>${name}</span>`;
-    };
-
-    // --- reconstruir selects de cliente
-    function rebuildClientControls(){
-      const arr = window.state.clients||DEFAULT_CLIENTS;
-      const fc = document.getElementById('filterClient'); if(fc){ fc.innerHTML = '<option value="">Todos</option>' + arr.map(c=>`<option>${c.name}</option>`).join(''); }
-      const sel = document.getElementById('f_client'); if(sel){ sel.innerHTML = arr.map(c=>`<option>${c.name}</option>`).join(''); }
+    // tabela de entregas
+    const tbl=$('#tbl'); const tb=tbl.querySelector('tbody'); tb.innerHTML='';
+    for(const t of arr.slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''))){
+      const tr=document.createElement('tr'); tr.innerHTML = `
+        <td><strong>${t.title}</strong><div style="opacity:.7;font-size:12px">${t.desc||''}</div></td>
+        <td>${clientTag(t.client)}</td>
+        <td>${(t.collabs||[]).join(', ')}</td>
+        <td>${t.status}</td>
+        <td>${fmtDate(t.date||'')}</td>
+        <td>${new Date(t.updated||Date.now()).toLocaleString('pt-BR')}</td>
+        <td><button class="btn ghost" data-edit="${t.id}">Editar</button></td>`;
+      tb.appendChild(tr);
+      tr.querySelector('[data-edit]').onclick=()=> openTask(tasks.find(x=>x.id===t.id));
     }
+  }
 
-    // adicionar botão "Clientes" se não existir
-    const btnPrint = document.getElementById('btnPrint');
-    if(btnPrint && !document.getElementById('btnClients')){
-      const b=document.createElement('button'); b.className='btn secondary'; b.id='btnClients'; b.textContent='Clientes'; b.title='Gerenciar clientes';
-      btnPrint.insertAdjacentElement('afterend', b);
+  // ====== UI HANDLERS ======
+  $('#q').addEventListener('input', render);
+  ['fClient','fCollab','fStatus','fDate'].forEach(id=> document.getElementById(id).addEventListener('change', render));
+  $('#btnClear').onclick=()=>{ ['q','fClient','fCollab','fStatus','fDate'].forEach(id=>{const el=document.getElementById(id); el.value='';}); render(); };
+  $('#btnPrint').onclick=()=> window.print();
+  $('#btnExportCsv').onclick=()=>{
+    const arr = filtered();
+    const head=['id','title','client','collabs','status','date','desc','updated'];
+    const rows=[head.join(',')].concat(arr.map(t=>[t.id,t.title,t.client,(t.collabs||[]).join('|'),t.status,t.date,t.desc,t.updated].map(csvEscape).join(',')));
+    const blob=new Blob([rows.join('
+')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tarefas.csv'; a.click();
+  };
+  $('#btnExportJson').onclick=()=>{
+    const arr = filtered(); const blob=new Blob([JSON.stringify(arr,null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tarefas.json'; a.click();
+  };
+  $('#importJson').addEventListener('change', async (e)=>{
+    const file=e.target.files[0]; if(!file) return; const text=await file.text(); let data=[]; try{data=JSON.parse(text);}catch(err){alert('JSON inválido');return}
+    if(!Array.isArray(data)){ alert('Esperado um array de tarefas'); return; }
+    if(!confirm('Importar '+data.length+' tarefas para o time?')) return;
+    for(const x of data){ const t={ id: undefined, title:x.title||'Sem título', client:x.client||clients[0]?.name||'Cliente', status:x.status||'A Fazer', date:x.date||null, collabs:x.collabs||[], desc:x.desc||'', updated:new Date().toISOString(), team:TEAM };
+      const row=await dbInsert(t); if(row) tasks.push(row);
     }
+    render(); e.target.value='';
+  });
+  $('#btnLogout').onclick=async ()=>{ if(sb) await sb.auth.signOut(); location.reload(); };
 
-    // construir modal de clientes quando abrir
-    function openClients(){
-      const m = document.getElementById('clientsModal');
-      m.style.display=''; m.classList.add('show'); m.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
-      const sheet = document.createElement('div'); sheet.className='sheet';
-      sheet.innerHTML = `
-        <div class="sheet-h"><strong id="clientsTitle">Clientes</strong>
-          <div><button class="btn ghost" id="btnAddClient">+ Adicionar</button>
-          <button class="btn" id="btnSaveClients">Salvar</button></div></div>
-        <div class="sheet-b"><div id="clientsList" style="display:grid;gap:10px"></div>
-        <div style="font-size:12px;opacity:.7;margin-top:8px">Remover um cliente não apaga tarefas antigas; elas continuam com o nome antigo até você editar.</div></div>`;
-      m.innerHTML=''; m.appendChild(sheet);
-      const list = sheet.querySelector('#clientsList');
-      (window.state.clients||DEFAULT_CLIENTS).forEach(c=> addRow(c.name,c.color,list));
-      m.onclick=(e)=>{ if(e.target===m){ closeClients(); } };
-      sheet.querySelector('#btnAddClient').onclick=()=> addRow('', '#888888', list);
-      sheet.querySelector('#btnSaveClients').onclick=()=>{
-        const rows = Array.from(list.querySelectorAll('.client-row'));
-        const next = rows.map(r=>{ const n=r.querySelector('input[type="text"]').value.trim(); const col=r.querySelector('input[type="color"]').value; return n?{name:n,color:col,text:pickText(col)}:null }).filter(Boolean);
-        if(next.length===0){ alert('Adicione pelo menos um cliente.'); return; }
-        window.state.clients = next; if(typeof save==='function'){ try{ save(); }catch(e){} }
-        rebuildClientControls(); if(typeof render==='function') render(); closeClients();
+  // ====== TASK MODAL ======
+  function openTask(t){
+    const tpl=$('#tplTaskModal').content.cloneNode(true); const panel=tpl.querySelector('.panel');
+    const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel);
+    document.body.appendChild(wrap);
+    panel.querySelector('#taskTitle').textContent = t? 'Editar tarefa':'Nova tarefa';
+    const sel=panel.querySelector('#t_client'); sel.innerHTML = clients.map(c=>`<option ${t&&t.client===c.name?'selected':''}>${c.name}</option>`).join('');
+    panel.querySelector('#t_title').value = t?.title||'';
+    panel.querySelector('#t_status').value = t?.status||'A Fazer';
+    panel.querySelector('#t_date').value = t?.date||'';
+    panel.querySelector('#t_collabs').value = (t?.collabs||[]).join(', ');
+    panel.querySelector('#t_desc').value = t?.desc||'';
+    panel.querySelector('#btnDel').style.display = t? 'inline-flex':'none';
+
+    wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
+    panel.querySelector('#btnSave').onclick = async ()=>{
+      const payload={
+        id: t?.id,
+        title: panel.querySelector('#t_title').value.trim()||'Sem título',
+        client: panel.querySelector('#t_client').value,
+        status: panel.querySelector('#t_status').value,
+        date: panel.querySelector('#t_date').value||null,
+        collabs: panel.querySelector('#t_collabs').value.split(',').map(s=>s.trim()).filter(Boolean),
+        desc: panel.querySelector('#t_desc').value.trim(),
+        updated: new Date().toISOString(),
+        team: TEAM
       };
-    }
-    function addRow(name,color,list){
-      const row=document.createElement('div'); row.className='client-row';
-      row.innerHTML=`<input type="text" placeholder="Nome do cliente" value="${name||''}">
-        <input type="color" value="${color||'#888888'}">
-        <button class="del" title="Remover">🗑️</button>`;
-      row.querySelector('.del').onclick=()=> row.remove();
-      list.appendChild(row);
-    }
-    function closeClients(){ const m=document.getElementById('clientsModal'); m.classList.remove('show'); m.setAttribute('aria-hidden','true'); document.body.style.overflow='auto'; m.style.display='none'; }
+      if(payload.id){ const row=await dbUpdate(payload); if(row){ const i=tasks.findIndex(x=>x.id===row.id); tasks[i]=row; }}
+      else { const row=await dbInsert(payload); if(row) tasks.unshift(row); }
+      // Atualiza lista de colaboradores
+      payload.collabs.forEach(c=>{ if(c && !collabs.includes(c)) collabs.push(c); });
+      localStorage.setItem('dipe_collabs', JSON.stringify(collabs));
+      buildFilters(); render(); wrap.remove();
+    };
+    panel.querySelector('#btnDel').onclick = async ()=>{ if(t && confirm('Excluir esta tarefa?')){ await dbDelete(t.id); tasks = tasks.filter(x=>x.id!==t.id); render(); wrap.remove(); } };
+  }
+  $('#btnNew').onclick=()=> openTask(null);
 
-    document.getElementById('btnClients')?.addEventListener('click', openClients);
-    rebuildClientControls();
+  // ====== CLIENTES MODAL ======
+  function openClients(){
+    const tpl=$('#tplClients').content.cloneNode(true); const panel=tpl.querySelector('.panel');
+    const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel);
+    document.body.appendChild(wrap);
+    const list=panel.querySelector('#clientsList');
+    function row(c){ const r=document.createElement('div'); r.className='row'; r.style.gap='8px'; r.innerHTML=`<input placeholder="Nome" value="${c?.name||''}" style="flex:1"><input type="color" value="${c?.color||'#888888'}" style="width:100px"><button class="btn ghost">🗑️</button>`; r.querySelector('button').onclick=()=> r.remove(); return r; }
+    clients.forEach(c=> list.appendChild(row(c)));
+    panel.querySelector('#btnAddClient').onclick=()=> list.appendChild(row({name:'',color:'#888888'}));
+    panel.querySelector('#btnSaveClients').onclick=()=>{ clients = Array.from(list.querySelectorAll('.row')).map(r=>{ const name=r.querySelector('input[type="text"]').value.trim(); const color=r.querySelector('input[type="color"]').value; if(!name) return null; const text = contrast(color); return {name, color, text}; }).filter(Boolean); localStorage.setItem('dipe_clients', JSON.stringify(clients)); buildFilters(); render(); wrap.remove(); };
+    wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
+  }
+  function contrast(hex){ try{ const c=hex.replace('#',''); const r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16); const yiq=((r*299)+(g*587)+(b*114))/1000; return yiq>=128?'#0a0a0a':'#ffffff'; }catch(e){ return '#111'; } }
+  $('#btnClients').onclick=openClients;
 
-    // --- inserir login por e-mail na tela de senha (overlay)
-    const ls = document.getElementById('lockscreen');
-    if(ls && !document.getElementById('lock-email')){
-      const panel = ls.querySelector('.panel');
-      const wrap = document.createElement('div');
-      wrap.innerHTML = `
-        <hr style="margin:14px 0;border:none;border-top:1px dashed #e5e5e5">
-        <h2 style="font-size:14px;margin:0 0 8px">Login do time</h2>
-        <label for="lock-email" style="font-size:12px;color:#666">E-mail corporativo</label>
-        <input type="email" id="lock-email" placeholder="seunome@digitalparaempresas.com.br" />
-        <button class="btn" type="button" id="lock-send">Enviar link de acesso</button>
-        <div class="error" id="lock-msg"></div>`;
-      panel.appendChild(wrap);
-      document.getElementById('lock-send').addEventListener('click', async ()=>{
-        try{
-          if(!window.sb){
-            if(window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY){ window.sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY); }
-          }
-          if(!window.sb){ alert('Configure o Supabase (URL e Anon Key) no index.html.'); return; }
-          const email = document.getElementById('lock-email').value.trim();
-          if(!email || !email.endsWith('@digitalparaempresas.com.br')){ document.getElementById('lock-msg').textContent = 'Use um e-mail @digitalparaempresas.com.br'; return; }
-          const { error } = await window.sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href } });
-          document.getElementById('lock-msg').textContent = error ? ('Erro: '+error.message) : ('Enviamos um link de acesso para '+email);
-        }catch(err){ document.getElementById('lock-msg').textContent = 'Erro inesperado'; }
-      });
-    }
-  })();
+  // ====== COLABS MODAL ======
+  function openCollabs(){
+    const tpl=$('#tplCollabs').content.cloneNode(true); const panel=tpl.querySelector('.panel');
+    const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel);
+    document.body.appendChild(wrap);
+    const list=panel.querySelector('#collabsList');
+    function row(name){ const r=document.createElement('div'); r.className='row'; r.style.gap='8px'; r.innerHTML=`<input placeholder="Nome do colaborador" value="${name||''}" style="flex:1"><button class="btn ghost">🗑️</button>`; r.querySelector('button').onclick=()=> r.remove(); return r; }
+    collabs.forEach(c=> list.appendChild(row(c)));
+    panel.querySelector('#btnAddCollab').onclick=()=> list.appendChild(row(''));
+    panel.querySelector('#btnSaveCollabs').onclick=()=>{ collabs = Array.from(list.querySelectorAll('input')).map(i=>i.value.trim()).filter(Boolean); localStorage.setItem('dipe_collabs', JSON.stringify(collabs)); buildFilters(); render(); wrap.remove(); };
+    wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
+  }
+  $('#btnCollabs').onclick=openCollabs;
+
+  // ====== LOGIN actions ======
+  $('#btnMagic').onclick = async ()=>{
+    if(!sb){ alert('Configure o Supabase no index.html'); return; }
+    const email=$('#email').value.trim(); if(!email){ alert('Digite seu e-mail'); return; }
+    if(!email.endsWith(DOMAIN)){ alert('Use um e-mail '+DOMAIN); return; }
+    const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href } });
+    $('#loginMsg').style.color = error? '#b91c1c':'#065f46';
+    $('#loginMsg').textContent = error? ('Erro: '+error.message) : ('Enviamos um link de acesso para '+email);
+  };
+  $('#btnLogout').onclick = async ()=>{ if(sb) await sb.auth.signOut(); location.reload(); };
+
+  // start
+  checkAuth(); buildFilters(); render();
   </script>
 </body>
 </html>
