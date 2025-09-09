@@ -166,7 +166,7 @@
         <button class="tab" data-view="weekly">Semanal</button>
         <button class="tab" data-view="deliveries">Entregas</button>
       </nav>
-      $1
+      <div class="seg">
         <button class="btn secondary" id="btnNewTask">+ Nova tarefa</button>
         <button class="btn secondary" id="btnExportCsv" title="Baixar CSV das tarefas">Exportar CSV</button>
         <button class="btn secondary" id="btnExportJson" title="Baixar backup JSON">Backup JSON</button>
@@ -175,7 +175,7 @@
         <button class="btn secondary" id="btnSBLogin" title="Entrar para sincronizar com a equipe">Entrar (time)</button>
         <button class="btn ghost hidden" id="btnSBLogout" title="Sair da conta da equipe">Sair (time)</button>
         <button class="btn ghost" id="btnLogout" title="Bloquear esta página">Bloquear página</button>
-      $2
+      </div>
     </div>
 
     <!-- Toolbar (filtros) -->
@@ -277,6 +277,29 @@
     </section>
   </main>
 
+  <!-- Modal de Login do Time (Supabase) -->
+  <div class="modal" id="sbModal" aria-hidden="true" aria-labelledby="sbTitle">
+    <div class="sheet">
+      <div class="sheet-h">
+        <strong id="sbTitle">Entrar no time</strong>
+        <div></div>
+      </div>
+      <div class="sheet-b">
+        <div class="grid">
+          <div class="full">
+            <label for="sbEmail">E-mail corporativo</label>
+            <input type="email" id="sbEmail" placeholder="seunome@digitalparaempresas.com.br" required />
+            <div style="font-size:12px;opacity:.7;margin-top:6px">Usamos um link mágico por e-mail. Seu domínio precisa ser <code>@digitalparaempresas.com.br</code>.</div>
+          </div>
+          <div class="full">
+            <button class="btn" id="btnSendMagic">Enviar link de acesso</button>
+          </div>
+        </div>
+        <div id="sbMsg" style="font-size:12px;color:#065f46;margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Nova/Editar Tarefa -->
   <div class="modal" id="taskModal" aria-hidden="true" aria-labelledby="taskTitle">
     <div class="sheet">
@@ -371,8 +394,8 @@
 
 <script>
 // === SUPABASE — Configuração e helpers ===
-const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co'; // <-- cole aqui
-const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';               // <-- cole aqui
+const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';
 const TEAM = 'dipe';
 const sb = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 let isAuthed = false, rtChannel = null;
@@ -394,10 +417,25 @@ async function bootAuth(){
     isAuthed = !!session; toggleAuthBtns(isAuthed);
     if(isAuthed){ await syncFromDB(); setupRealtime(); } else { if(rtChannel){ sb.removeChannel(rtChannel); rtChannel=null; } }
   });
-  document.getElementById('btnSBLogin')?.addEventListener('click', async ()=>{
-    const email = prompt('Digite seu e-mail para receber o link de acesso:');
-    if(!email) return;
+  document.getElementById('btnSBLogin')?.addEventListener('click', ()=>{
+    if(!SUPABASE_URL || SUPABASE_URL.includes('YOUR-PROJECT') || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.includes('YOUR-ANON-KEY')){
+      alert('Complete as chaves do Supabase no index.html antes: SUPABASE_URL e SUPABASE_ANON_KEY.');
+      return;
+    }
+    const m = document.getElementById('sbModal');
+    m.classList.add('show'); m.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
+    const close = (e)=>{ if(e.target===m){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); document.body.style.overflow='auto'; } };
+    m.addEventListener('click', close, { once:true });
+  });
+  document.getElementById('btnSendMagic')?.addEventListener('click', async ()=>{
+    const email = document.getElementById('sbEmail').value.trim();
+    if(!email) { alert('Digite seu e-mail.'); return; }
+    if(!email.endsWith('@digitalparaempresas.com.br')){ alert('Use um e-mail @digitalparaempresas.com.br'); return; }
     const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href } });
+    const msg = document.getElementById('sbMsg');
+    if(error){ msg.style.color='#b91c1c'; msg.textContent = 'Erro: '+error.message; }
+    else { msg.style.color='#065f46'; msg.textContent = 'Enviamos um link de acesso para '+email+'. Abra o e-mail e clique no link.'; }
+  });
     alert(error ? ('Erro: '+error.message) : 'Enviamos um link de acesso para seu e-mail.');
   });
   document.getElementById('btnSBLogout')?.addEventListener('click', async ()=>{ await sb.auth.signOut(); });
@@ -448,7 +486,7 @@ async function dbDelete(id){
 bootAuth();
 </script>
 
-$1
+<script>
   const $ = (sel, el=document) => el.querySelector(sel);
   const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '';
@@ -541,7 +579,7 @@ $1
       };
       if(!t.title) { alert('Dê um título à tarefa.'); return }
       t.collabs.forEach(c=>{ if(!state.collabs.includes(c)) state.collabs.push(c) });
-      document.getElementById('filterCollab').innerHTML = '<option value="">Todos</option>' + state.collabs.map(c=>`<option>${c}</option>`).join('');
+      $('#filterCollab').innerHTML = '<option value="">Todos</option>' + state.collabs.map(c=>`<option>${c}</option>`).join('');
 
       if(isAuthed && sb){
         if(t.id){
@@ -565,6 +603,86 @@ $1
         render(); hide();
       }
     }
+
+    function hide(){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); document.body.style.overflow='auto'; }
+  }
+
+  // ===== Filtros e renderização =====
+  function filteredTasks(){
+    const q = $('#q').value.trim().toLowerCase();
+    const fc = $('#filterClient').value; const fco = $('#filterCollab').value; const fs = $('#filterStatus').value;
+    return state.tasks.filter(t=>{
+      const matchesQ = !q || (t.title+t.desc).toLowerCase().includes(q);
+      const matchesC = !fc || t.client===fc;
+      const matchesCo = !fco || (t.collabs||[]).includes(fco);
+      const matchesS = !fs || t.status===fs;
+      return matchesQ && matchesC && matchesCo && matchesS;
+    });
+  }
+
+  function render(){
+    const list = filteredTasks();
+    renderStats(list);
+
+    // Diário
+    const d = $('#view-daily');
+    if(!d.classList.contains('hidden')){
+      const day = $('#dateDaily').value || todayISO();
+      const tasks = list.filter(t=> (t.date||'')===day && t.status!=='Backlog');
+      const todo = tasks.filter(t=>t.status==='A Fazer');
+      const doing = tasks.filter(t=>t.status==='Em Progresso');
+      const done = tasks.filter(t=>t.status==='Concluído');
+      d.querySelectorAll('.drop').forEach(el=> el.innerHTML='');
+      renderCards(d.querySelector('[data-status="A Fazer"] .drop'), todo, 'daily');
+      renderCards(d.querySelector('[data-status="Em Progresso"] .drop'), doing, 'daily');
+      renderCards(d.querySelector('[data-status="Concluído"] .drop'), done, 'daily');
+      $('#count_todo').textContent=todo.length; $('#count_doing').textContent=doing.length; $('#count_done').textContent=done.length;
+    }
+
+    // Semanal
+    const w = $('#view-weekly');
+    if(!w.classList.contains('hidden')){
+      const anyDay = $('#dateWeekly').value || todayISO();
+      const mon = mondayOf(anyDay);
+      w.innerHTML='';
+      for(let i=0;i<7;i++){
+        const day = addDays(mon,i);
+        const dayTasks = list.filter(t=> (t.date||'')===day && t.status!=='Backlog');
+        const name = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'][i];
+        const col = document.createElement('div'); col.className='col'; col.dataset.day = day;
+        col.innerHTML = `<div class="col-head"><div class="col-title">📅 ${name} <span class="pill" style="margin-left:8px">${fmtDate(day)}</span></div><span class="badge">${dayTasks.length}</span></div><div class="drop" data-drop="weekly"></div>`;
+        w.appendChild(col);
+        renderCards($('.drop', col), dayTasks, 'weekly');
+      }
+    }
+
+    // Entregas
+    const e = $('#view-deliveries');
+    if(!e.classList.contains('hidden')){
+      const tbody = $('#tbl tbody');
+      tbody.innerHTML='';
+      list.sort((a,b)=> (a.date||'').localeCompare(b.date||''));
+      for(const t of list){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${escapeHtml(t.title)}</strong><div style="opacity:.7;font-size:12px;margin-top:4px">${escapeHtml(t.desc||'')}</div></td>
+          <td>${clientTag(t.client)}</td>
+          <td>${(t.collabs||[]).map(c=>avatarHTML(c)).join(' ')}</td>
+          <td><span class="badge">${t.status}</span></td>
+          <td>${fmtDate(t.date||'')}</td>
+          <td>${new Date(t.updated||Date.now()).toLocaleString('pt-BR')}</td>
+          <td><button class="btn ghost" data-edit="${t.id}">Editar</button></td>`;
+        tbody.appendChild(tr);
+      }
+      // editar
+      $$('button[data-edit]').forEach(b=> b.addEventListener('click', ()=>{
+        const t = state.tasks.find(x=>x.id===b.dataset.edit); openTaskModal(t);
+      }))
+    }
+
+    // DnD listeners
+    $$('.drop').forEach(drop=>{
+      drop.ondragover = (e)=>{ e.preventDefault(); drop.style.background='#faf9f4' };
       drop.ondragleave = ()=> drop.style.background='';
       drop.ondrop = (e)=>{
         e.preventDefault(); drop.style.background='';
@@ -572,11 +690,9 @@ $1
         const task = state.tasks.find(t=>t.id===id); if(!task) return;
         const parentCol = drop.closest('.col');
         if(drop.dataset.drop==='daily'){
-          // Mudar status para coluna atual e dia = selecionado
           task.status = parentCol.dataset.status;
           task.date = $('#dateDaily').value || todayISO();
         }else{
-          // Semanal: mover para o dia
           task.date = parentCol.dataset.day;
         }
         task.updated = Date.now(); save(); render();
