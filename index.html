@@ -112,7 +112,15 @@
       .grid{grid-template-columns:1fr}
       .seg{flex-wrap:wrap}
     }
-  </style>
+    /* Ajustes de visibilidade em header escuro */
+  header .btn.ghost{border:1px solid rgba(255,255,255,.35); color:#fff}
+  header #btnSBLogout{background:#fff; color:#111; border-color:#fff}
+  header #btnSBLogin{background:#111; color:#fff; border-color:rgba(255,255,255,.2)}
+  
+  /* Rótulos compactos acima dos filtros */
+  .filter-wrap{display:grid; gap:6px}
+  .filter-wrap label{font-size:12px; opacity:.7; padding-left:4px}
+</style>
   
   <!-- Gate de senha (básico) -->
   <style>
@@ -169,7 +177,9 @@
       <div class="seg">
         <button class="btn secondary" id="btnNewTask">+ Nova tarefa</button>
         <button class="btn secondary" id="btnExportCsv" title="Baixar CSV das tarefas">Exportar CSV</button>
-        <button class="btn secondary" id="btnExportJson" title="Baixar backup JSON">Backup JSON</button>
+        $1
+        <button class="btn secondary" id="btnClients" title="Gerenciar clientes">Clientes</button>
+        <button class="btn secondary" id="btnCollabs" title="Gerenciar colaboradores">Colaboradores</button>
         <label class="btn ghost" for="importFile" title="Importar JSON"><input type="file" id="importFile" accept="application/json" style="display:none">Importar</label>
         <button class="btn" id="btnPrint">Imprimir relatório</button>
         <button class="btn secondary" id="btnSBLogin" title="Entrar para sincronizar com a equipe">Entrar (time)</button>
@@ -277,6 +287,23 @@
     </section>
   </main>
 
+  <!-- Modal Colaboradores -->
+  <div class="modal" id="collabsModal" aria-hidden="true" aria-labelledby="collabsTitle">
+    <div class="sheet">
+      <div class="sheet-h">
+        <strong id="collabsTitle">Colaboradores</strong>
+        <div>
+          <button class="btn ghost" id="btnAddCollab">+ Adicionar</button>
+          <button class="btn" id="btnSaveCollabs">Salvar</button>
+        </div>
+      </div>
+      <div class="sheet-b">
+        <div id="collabsList" style="display:grid; gap:10px"></div>
+        <div style="font-size:12px; opacity:.7; margin-top:8px">Os nomes aparecem nos filtros e como sugestões no campo de colaboradores da tarefa.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de Login do Time (Supabase) -->
   <div class="modal" id="sbModal" aria-hidden="true" aria-labelledby="sbTitle">
     <div class="sheet">
@@ -286,18 +313,19 @@
       </div>
       <div class="sheet-b">
         <div class="grid">
-          <div class="full">
+          <div class="full filter-wrap">
             <label for="sbEmail">E-mail corporativo</label>
             <input type="email" id="sbEmail" placeholder="seunome@digitalparaempresas.com.br" required />
-            <div style="font-size:12px;opacity:.7;margin-top:6px">Usamos um link mágico por e-mail. Seu domínio precisa ser <code>@digitalparaempresas.com.br</code>.</div>
           </div>
           <div class="full">
             <button class="btn" id="btnSendMagic">Enviar link de acesso</button>
           </div>
+          <div class="full" style="font-size:12px;opacity:.7">Você receberá um e-mail com um link de acesso. Somente contas <code>@digitalparaempresas.com.br</code> entram no time.</div>
         </div>
         <div id="sbMsg" style="font-size:12px;color:#065f46;margin-top:10px"></div>
       </div>
     </div>
+  </div>
   </div>
 
   <!-- Modal Nova/Editar Tarefa -->
@@ -340,7 +368,8 @@
           </div>
           <div>
             <label for="f_collabs">Colaboradores (separe por vírgula)</label>
-            <input type="text" id="f_collabs" placeholder="Ex.: Camila, Alinne">
+            <input type="text" id="f_collabs" list="dlCollabs"$1>
+            <datalist id="dlCollabs"></datalist>
           </div>
           <div class="full">
             <label for="f_desc">Descrição</label>
@@ -394,8 +423,8 @@
 
 <script>
 // === SUPABASE — Configuração e helpers ===
-const SUPABASE_URL = 'https://agvlectfxflbdccklesk.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndmxlY3RmeGZsYmRjY2tsZXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczODA5MzUsImV4cCI6MjA3Mjk1NjkzNX0.lN-cwvX7t3BRLQdQ3ylmb__Ux7y9Zaa1dBp6x7vSKyI';
+const SUPABASE_URL = 'https://agvlectfxflbdccklesk.supabase.co; // <-- cole aqui
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndmxlY3RmeGZsYmRjY2tsZXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczODA5MzUsImV4cCI6MjA3Mjk1NjkzNX0.lN-cwvX7t3BRLQdQ3ylmb__Ux7y9Zaa1dBp6x7vSKyI';               // <-- cole aqui
 const TEAM = 'dipe';
 const sb = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 let isAuthed = false, rtChannel = null;
@@ -419,7 +448,23 @@ async function bootAuth(){
   });
   document.getElementById('btnSBLogin')?.addEventListener('click', ()=>{
     if(!SUPABASE_URL || SUPABASE_URL.includes('YOUR-PROJECT') || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.includes('YOUR-ANON-KEY')){
-      alert('Complete as chaves do Supabase no index.html antes: SUPABASE_URL e SUPABASE_ANON_KEY.');
+      alert('Acesso do time indisponível: configure SUPABASE_URL e SUPABASE_ANON_KEY.');
+      return;
+    }
+    const m = document.getElementById('sbModal');
+    m.classList.add('show'); m.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
+    const close = (e)=>{ if(e.target===m){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); document.body.style.overflow='auto'; } };
+    m.addEventListener('click', close, { once:true });
+  });
+  document.getElementById('btnSendMagic')?.addEventListener('click', async ()=>{
+    const email = document.getElementById('sbEmail').value.trim();
+    if(!email) { alert('Digite seu e-mail.'); return; }
+    if(!email.endsWith('@digitalparaempresas.com.br')){ alert('Use um e-mail @digitalparaempresas.com.br'); return; }
+    const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href } });
+    const msg = document.getElementById('sbMsg');
+    if(error){ msg.style.color='#b91c1c'; msg.textContent = 'Erro: '+error.message; }
+    else { msg.style.color='#065f46'; msg.textContent = 'Enviamos um link de acesso para '+email+'. Abra o e-mail e clique no link.'; }
+  });
       return;
     }
     const m = document.getElementById('sbModal');
@@ -484,6 +529,53 @@ async function dbDelete(id){
 }
 
 bootAuth();
+
+  // ===== UX do overlay: priorizar login por e-mail do time e esconder senha por padrão
+  (function(){
+    const ls = document.getElementById('lockscreen'); if(!ls) return;
+    const panel = ls.querySelector('.panel');
+    const title = panel.querySelector('#ls-title'); if(title) title.textContent='Acesso ao painel';
+    const form = panel.querySelector('#lock-form');
+    // move bloco de e-mail (se existir) para cima do formulário de senha
+    const emailInput = panel.querySelector('#lock-email');
+    if(emailInput && form){ panel.insertBefore(emailInput.parentElement.parentElement ?? emailInput.parentElement, form); }
+    // esconder senha por padrão, com link "Sou admin"
+    if(form){
+      const toggle = document.createElement('button'); toggle.type='button'; toggle.className='btn ghost'; toggle.textContent='Sou admin (entrar com senha)'; toggle.style.margin='8px 0 0';
+      const wrap = document.createElement('div'); wrap.style.marginTop='6px'; wrap.appendChild(toggle);
+      form.style.display='none'; panel.appendChild(wrap);
+      toggle.onclick=()=>{ form.style.display = form.style.display==='none' ? 'block':'none'; };
+    }
+  })();
+
+  // ===== Gerenciar Colaboradores =====
+  function rebuildCollabsUI(){
+    const fc = document.getElementById('filterCollab'); if(fc){ fc.innerHTML = '<option value="">Todos</option>' + (state.collabs||[]).map(c=>`<option>${c}</option>`).join(''); }
+    const dl = document.getElementById('dlCollabs'); if(dl){ dl.innerHTML = (state.collabs||[]).map(c=>`<option value="${c}"></option>`).join(''); }
+  }
+  document.getElementById('btnCollabs')?.addEventListener('click', ()=>{
+    const m=document.getElementById('collabsModal'); const list=m.querySelector('#collabsList'); list.innerHTML='';
+    (state.collabs||[]).forEach(addRow);
+    m.classList.add('show'); m.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
+    m.onclick=(e)=>{ if(e.target===m){ close(); } };
+    m.querySelector('#btnAddCollab').onclick=()=> addRow('');
+    m.querySelector('#btnSaveCollabs').onclick=()=>{
+      const names = Array.from(list.querySelectorAll('input')).map(i=>i.value.trim()).filter(Boolean);
+      state.collabs = Array.from(new Set(names)).sort((a,b)=>a.localeCompare(b));
+      save(); rebuildCollabsUI(); render(); close();
+    };
+    function addRow(name){ const r=document.createElement('div'); r.className='client-row'; r.innerHTML=`<input type="text" placeholder="Nome do colaborador" value="${name||''}"><span></span><button class="del">🗑️</button>`; r.querySelector('.del').onclick=()=>r.remove(); list.appendChild(r);} 
+    function close(){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); document.body.style.overflow='auto'; }
+  });
+  rebuildCollabsUI();
+
+  // Desbloquear overlay automaticamente quando o usuário do time autenticar
+  (async function(){
+    try{
+      if(sb){ const { data:{ session } } = await sb.auth.getSession(); if(session && document.documentElement.classList.contains('locked')){ if(window.unlock) window.unlock(); }}
+      if(sb) sb.auth.onAuthStateChange((_evt, session)=>{ if(session && document.documentElement.classList.contains('locked')){ if(window.unlock) window.unlock(); }});
+    }catch(e){}
+  })();
 </script>
 
 <script>
