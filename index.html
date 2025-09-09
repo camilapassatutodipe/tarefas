@@ -120,6 +120,16 @@
   /* Rótulos compactos acima dos filtros */
   .filter-wrap{display:grid; gap:6px}
   .filter-wrap label{font-size:12px; opacity:.7; padding-left:4px}
+  /* Forçar legibilidade em superfícies claras */
+  input, select, textarea { color:#111 !important; background:#fff !important; }
+  ::placeholder{ color:#666 !important; opacity:1 }
+  /* Contraste do header escuro */
+  header .btn{border-color:rgba(255,255,255,.25)}
+  header .btn, header .btn *{ color:#fff !important }
+  header #btnSBLogout{ background:#fff !important; color:#111 !important; border-color:#fff !important }
+  header #btnSBLogin{ background:#111 !important; color:#fff !important; border-color:rgba(255,255,255,.2) !important }
+  .filter-wrap{display:grid; gap:6px}
+  .filter-wrap label{font-size:12px; opacity:.75; padding-left:4px}
 </style>
   
   <!-- Gate de senha (básico) -->
@@ -423,8 +433,8 @@
 
 <script>
 // === SUPABASE — Configuração e helpers ===
-const SUPABASE_URL = 'https://agvlectfxflbdccklesk.supabase.co; // <-- cole aqui
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndmxlY3RmeGZsYmRjY2tsZXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczODA5MzUsImV4cCI6MjA3Mjk1NjkzNX0.lN-cwvX7t3BRLQdQ3ylmb__Ux7y9Zaa1dBp6x7vSKyI';               // <-- cole aqui
+const SUPABASE_URL = 'https://agvlectfxflbdccklesk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndmxlY3RmeGZsYmRjY2tsZXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczODA5MzUsImV4cCI6MjA3Mjk1NjkzNX0.lN-cwvX7t3BRLQdQ3ylmb__Ux7y9Zaa1dBp6x7vSKyI';
 const TEAM = 'dipe';
 const sb = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 let isAuthed = false, rtChannel = null;
@@ -529,6 +539,23 @@ async function dbDelete(id){
 }
 
 bootAuth();
+
+  // ===== Rótulos/Ícones nos filtros do topo =====
+  (function enhanceFilters(){
+    function wrapWithLabel(id, label){
+      const el = document.getElementById(id); if(!el) return;
+      if(el.closest('.filter-wrap')) return;
+      const w=document.createElement('div'); w.className='filter-wrap';
+      const l=document.createElement('label'); l.setAttribute('for', id); l.textContent = label;
+      const parent=el.parentNode; parent.insertBefore(w, el); w.appendChild(l); w.appendChild(el);
+    }
+    wrapWithLabel('q','🔎 Pesquisar');
+    wrapWithLabel('filterClient','🏢 Cliente');
+    wrapWithLabel('filterCollab','👤 Colaborador');
+    wrapWithLabel('filterStatus','🏷️ Status');
+    wrapWithLabel('dateDaily','🗓️ Data');
+    wrapWithLabel('dateWeekly','🗓️ Semana');
+  })();
 
   // ===== UX do overlay: priorizar login por e-mail do time e esconder senha por padrão
   (function(){
