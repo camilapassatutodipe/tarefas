@@ -113,8 +113,41 @@
       .seg{flex-wrap:wrap}
     }
   </style>
+  
+  <!-- Gate de senha (básico) -->
+  <style>
+    html.locked body{overflow:hidden}
+    #lockscreen{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:linear-gradient(180deg,#1b1b18 0,#2a2a26 100%); z-index:9999 }
+    #lockscreen .panel{ width:min(420px,92vw); background:#fff; border-radius:16px; padding:18px; box-shadow:0 20px 60px rgba(0,0,0,.4) }
+    #lockscreen h1{margin:0 0 10px; font-size:18px}
+    #lockscreen label{font-size:12px; color:#666}
+    #lockscreen input[type=password]{width:100%; padding:10px 12px; border-radius:12px; border:1px solid #ddd; font:inherit; margin:8px 0 12px}
+    #lockscreen .btn{appearance:none; border:none; background:var(--accent); color:#fff; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600}
+    #lockscreen .error{color:#b91c1c; font-size:12px; min-height:18px}
+  </style>
+  <script>document.documentElement.classList.add('locked');</script>
 </head>
 <body>
+  <!-- Tela de senha -->
+  <div id="lockscreen" role="dialog" aria-modal="true" aria-labelledby="ls-title">
+    <div class="panel">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <div class="brand-badge">D</div>
+        <div><strong>Agência Dipe</strong><div style="font-size:12px;opacity:.7">Acesso restrito</div></div>
+      </div>
+      <h1 id="ls-title">Digite a senha</h1>
+      <form id="lock-form">
+        <label for="lock-pass">Senha</label>
+        <input type="password" id="lock-pass" placeholder="••••••••" required />
+        <div style="display:flex;align-items:center;gap:8px;margin:0 0 12px">
+          <input type="checkbox" id="lock-remember" />
+          <label for="lock-remember">Lembrar por 7 dias neste dispositivo</label>
+        </div>
+        <div class="error" id="lock-error"></div>
+        <button class="btn" type="submit">Entrar</button>
+      </form>
+    </div>
+  </div>
   <!-- Header / Tabs -->
   <header class="bar" role="banner">
     <div class="bar-inner">
@@ -136,6 +169,7 @@
         <button class="btn secondary" id="btnExportJson" title="Baixar backup JSON">Backup JSON</button>
         <label class="btn ghost" for="importFile" title="Importar JSON"><input type="file" id="importFile" accept="application/json" style="display:none">Importar</label>
         <button class="btn" id="btnPrint">Imprimir relatório</button>
+        <button class="btn ghost" id="btnLogout" title="Sair da sessão">Sair</button>
       </div>
     </div>
 
@@ -290,6 +324,47 @@
   </div>
 
   <script>
+(function(){
+  // sha256("dipe2025!") — troque o hash para mudar a senha
+  const PASS_HASH = "9c1be30472290f574e714090b73254428bd5c557c9a504349c7cf38ecb3c0681";
+  const KEY_SESSION = "dipe_auth";
+  const KEY_UNTIL   = "dipe_auth_until";
+  async function sha256(s){
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+  }
+  function unlock(){
+    document.documentElement.classList.remove("locked");
+    const ls = document.getElementById("lockscreen"); if(ls) ls.remove();
+    window.__unlocked = true;
+  }
+  const until = parseInt(localStorage.getItem(KEY_UNTIL)||"0",10);
+  if (sessionStorage.getItem(KEY_SESSION)==="ok" || (until && Date.now()<until)) {
+    unlock();
+  } else {
+    window.addEventListener("DOMContentLoaded", ()=>{
+      const ls = document.getElementById("lockscreen"); if(ls) ls.style.display = "flex";
+      const form = document.getElementById("lock-form");
+      if(form) form.addEventListener("submit", async (e)=>{
+        e.preventDefault();
+        const pwd = document.getElementById("lock-pass").value;
+        const remember = document.getElementById("lock-remember").checked;
+        const hash = await sha256(pwd);
+        if(hash === PASS_HASH){
+          sessionStorage.setItem(KEY_SESSION,"ok");
+          if(remember){ localStorage.setItem(KEY_UNTIL, String(Date.now()+7*24*60*60*1000)); }
+          unlock();
+        } else {
+          const err = document.getElementById("lock-error"); if(err) err.textContent = "Senha incorreta";
+        }
+      });
+    });
+  }
+  window.logout = function(){ sessionStorage.removeItem(KEY_SESSION); localStorage.removeItem(KEY_UNTIL); location.reload(); };
+})();
+</script>
+
+<script>
   // ===== Utilidades =====
   const $ = (sel, el=document) => el.querySelector(sel);
   const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
@@ -342,6 +417,7 @@
   $('#btnThisWeek').addEventListener('click', ()=>{ dateWeekly.value = todayISO(); render(); })
   $('#btnNewWeek').addEventListener('click', startCleanWeek);
   $('#importFile').addEventListener('change', importJSON);
+  document.getElementById('btnLogout')?.addEventListener('click', ()=>{ if(confirm('Sair da sessão?')) window.logout(); });
 
   // Filtros
   ;['q','filterClient','filterCollab','filterStatus','dateDaily','dateWeekly'].forEach(id=>{
