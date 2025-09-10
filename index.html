@@ -68,4 +68,227 @@
   <!-- Form simples inline para criar/editar -->
   <div class="panel" id="formPanel">
     <div class="row" style="justify-content:space-between">
-      <strong id="formTitle">No
+      <strong id="formTitle">Nova tarefa</strong>
+      <div class="row">
+        <button class="btn ghost" id="btnCancel" type="button" title="Limpar/Cancelar">Cancelar</button>
+        <button class="btn" id="btnSave" type="button">Salvar</button>
+      </div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr 180px 150px 150px">
+      <div><label>Título</label><input id="t_title" placeholder="Ex.: Landing Matec - campanha X"></div>
+      <div><label>Cliente</label><select id="t_client"></select></div>
+      <div><label>Status</label>
+        <select id="t_status"><option>A Fazer</option><option>Em Progresso</option><option>Concluído</option><option>Backlog</option></select>
+      </div>
+      <div><label>Data</label><input id="t_date" type="date"></div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:8px">
+      <div><label>Colaboradores (separe por vírgula)</label><input id="t_collabs" placeholder="Camila, Alinne"></div>
+      <div><label>Descrição</label><input id="t_desc" placeholder="Resumo rápido da tarefa"></div>
+    </div>
+    <input id="t_id" type="hidden">
+  </div>
+
+  <!-- Filtros -->
+  <div class="grid filters" style="margin-top:14px">
+    <div><label for="f_q">🔎 Pesquisar</label><input id="f_q" placeholder="título/descrição"></div>
+    <div><label for="f_client">🏢 Cliente</label><select id="f_client"><option value="">Todos</option></select></div>
+    <div><label for="f_status">🏷️ Status</label>
+      <select id="f_status"><option value="">Todos</option><option>A Fazer</option><option>Em Progresso</option><option>Concluído</option><option>Backlog</option></select>
+    </div>
+    <div style="align-self:end"><button class="btn ghost" id="btnClear">Limpar</button></div>
+  </div>
+
+  <!-- Lista -->
+  <table id="tbl">
+    <thead><tr><th>Título</th><th>Cliente</th><th>Colaboradores</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</section>
+
+<!-- Modal simples de Clientes -->
+<section id="clientsModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:20">
+  <div class="panel" style="width:min(500px,92vw)">
+    <div class="row" style="justify-content:space-between">
+      <strong>Clientes</strong>
+      <div class="row"><button class="btn ghost" id="btnAddClient">+ Adicionar</button>
+      <button class="btn" id="btnSaveClients">Salvar</button></div>
+    </div>
+    <div id="clientsList" class="grid" style="margin-top:10px"></div>
+  </div>
+</section>
+
+<script>
+/* ==== CONFIG (mude a senha aqui) ==== */
+const PANEL_PASS = 'dipe2025!';
+const STORE_TASKS = 'dipe_tasks_v1';
+const STORE_CLIENTS = 'dipe_clients_v1';
+
+/* ==== Estado ==== */
+let tasks = [];
+let clients = JSON.parse(localStorage.getItem(STORE_CLIENTS)||'null') || [
+  {name:'Matec',        color:'#02d1ce', text:'#0a0a0a'},
+  {name:'Costrucione',  color:'#000000', text:'#ffffff'},
+  {name:'Vertticom',    color:'#d67a59', text:'#ffffff'},
+  {name:'LRocha',       color:'#7b1e2b', text:'#ffffff'},
+];
+
+/* ==== Utils ==== */
+const $ = (s)=>document.querySelector(s);
+const uid = ()=> (crypto.randomUUID? crypto.randomUUID(): (Date.now()+Math.random()).toString(16));
+function saveAll(){ localStorage.setItem(STORE_TASKS, JSON.stringify(tasks)); localStorage.setItem(STORE_CLIENTS, JSON.stringify(clients)); }
+function fmt(d){ if(!d) return ''; const p=d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
+function clientTag(n){ const c=clients.find(x=>x.name===n)||{color:'#ddd',text:'#111'}; return `<span class="tag" style="background:${c.color};color:${c.text}">${n}</span>`; }
+
+/* ==== Login simples ==== */
+function showApp(){ $('#login').classList.add('hidden'); $('#appHeader').classList.remove('hidden'); $('#app').classList.remove('hidden'); }
+function showLogin(){ $('#login').classList.remove('hidden'); $('#appHeader').classList.add('hidden'); $('#app').classList.add('hidden'); }
+$('#btnLogin').onclick = ()=>{ const v=$('#pass').value.trim(); if(v===PANEL_PASS){ sessionStorage.setItem('dipe_ok','1'); $('#loginMsg').textContent=''; start(); } else { $('#loginMsg').textContent='Senha incorreta'; } };
+$('#pass').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#btnLogin').click(); });
+
+/* ==== Inicialização ==== */
+function initClientsUI(){
+  // popular selects
+  $('#t_client').innerHTML = clients.map(c=>`<option>${c.name}</option>`).join('');
+  $('#f_client').innerHTML = '<option value="">Todos</option>' + clients.map(c=>`<option>${c.name}</option>`).join('');
+}
+function loadTasks(){ try{ tasks = JSON.parse(localStorage.getItem(STORE_TASKS)||'[]'); }catch(e){ tasks=[]; } }
+function render(){
+  const q = ($('#f_q').value||'').toLowerCase().trim();
+  const fc = $('#f_client').value; const fs=$('#f_status').value;
+  const rows = tasks.filter(t=>{
+    const okQ = !q || (t.title+t.desc).toLowerCase().includes(q);
+    const okC = !fc || t.client===fc;
+    const okS = !fs || t.status===fs;
+    return okQ && okC && okS;
+  }).sort((a,b)=> (b.updated||'').localeCompare(a.updated||''));
+  const tb = $('#tbl tbody'); tb.innerHTML='';
+  for(const t of rows){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${t.title}</strong><div style="opacity:.7;font-size:12px">${t.desc||''}</div></td>
+      <td>${clientTag(t.client)}</td>
+      <td>${(t.collabs||[]).join(', ')}</td>
+      <td>
+        <select data-id="${t.id}" class="status">
+          <option ${t.status==='A Fazer'?'selected':''}>A Fazer</option>
+          <option ${t.status==='Em Progresso'?'selected':''}>Em Progresso</option>
+          <option ${t.status==='Concluído'?'selected':''}>Concluído</option>
+          <option ${t.status==='Backlog'?'selected':''}>Backlog</option>
+        </select>
+      </td>
+      <td>${fmt(t.date||'')}</td>
+      <td>
+        <button class="btn ghost" data-edit="${t.id}">Editar</button>
+        <button class="btn ghost" data-del="${t.id}">Excluir</button>
+      </td>`;
+    tb.appendChild(tr);
+  }
+  // binds status/edit/del
+  document.querySelectorAll('select.status').forEach(s=>{
+    s.onchange = (e)=>{
+      const id=e.target.dataset.id; const t=tasks.find(x=>x.id===id); if(!t) return;
+      t.status=e.target.value; t.updated=new Date().toISOString(); saveAll(); render();
+    };
+  });
+  document.querySelectorAll('[data-edit]').forEach(b=>{
+    b.onclick = ()=>{ const t=tasks.find(x=>x.id===b.dataset.edit); fillForm(t); };
+  });
+  document.querySelectorAll('[data-del]').forEach(b=>{
+    b.onclick = ()=>{ if(confirm('Excluir esta tarefa?')){ tasks = tasks.filter(x=>x.id!==b.dataset.del); saveAll(); render(); } };
+  });
+}
+function fillForm(t){
+  $('#formTitle').textContent = t? 'Editar tarefa':'Nova tarefa';
+  $('#t_id').value = t?.id || '';
+  $('#t_title').value = t?.title || '';
+  $('#t_client').value = t?.client || (clients[0]?.name || '');
+  $('#t_status').value = t?.status || 'A Fazer';
+  $('#t_date').value = t?.date || '';
+  $('#t_collabs').value = (t?.collabs||[]).join(', ');
+  $('#t_desc').value = t?.desc || '';
+}
+function clearForm(){ fillForm(null); }
+
+/* ==== Ações ==== */
+$('#btnSave').onclick = ()=>{
+  const id = $('#t_id').value || uid();
+  const data = {
+    id,
+    title: $('#t_title').value.trim() || 'Sem título',
+    client: $('#t_client').value,
+    status: $('#t_status').value,
+    date: $('#t_date').value || null,
+    collabs: $('#t_collabs').value.split(',').map(s=>s.trim()).filter(Boolean),
+    desc: $('#t_desc').value.trim(),
+    updated: new Date().toISOString()
+  };
+  const i = tasks.findIndex(x=>x.id===id);
+  if(i>=0) tasks[i]=data; else tasks.unshift(data);
+  saveAll(); render(); clearForm();
+};
+$('#btnCancel').onclick = ()=> clearForm();
+$('#btnNew').onclick = ()=> { clearForm(); $('#t_title').focus(); };
+
+$('#btnExport').onclick = ()=>{
+  const blob = new Blob([JSON.stringify(tasks,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tarefas.json'; a.click();
+};
+$('#fileImport').addEventListener('change', async (e)=>{
+  const f=e.target.files[0]; if(!f) return; const text=await f.text(); let data=[];
+  try{ data=JSON.parse(text);}catch(err){ alert('JSON inválido'); return; }
+  if(!Array.isArray(data)){ alert('Esperado um array'); return; }
+  if(!confirm('Importar '+data.length+' tarefas?')) return;
+  for(const x of data){
+    tasks.push({
+      id: x.id||uid(), title: x.title||'Sem título', client: x.client||clients[0]?.name||'Cliente',
+      status: x.status||'A Fazer', date: x.date||null, collabs: x.collabs||[], desc: x.desc||'',
+      updated: x.updated||new Date().toISOString()
+    });
+  }
+  saveAll(); render(); e.target.value='';
+});
+$('#btnClients').onclick = ()=>{
+  const modal = $('#clientsModal'); const list = $('#clientsList'); list.innerHTML='';
+  const row = (c)=> {
+    const div=document.createElement('div'); div.className='row';
+    div.innerHTML = `<input type="text" placeholder="Nome" value="${c?.name||''}" style="flex:1">
+                     <input type="color" value="${c?.color||'#888888'}" style="width:100px">
+                     <button class="btn ghost">🗑️</button>`;
+    div.querySelector('button').onclick = ()=> div.remove();
+    return div;
+  };
+  clients.forEach(c=> list.appendChild(row(c)));
+  $('#btnAddClient').onclick = ()=> list.appendChild(row({name:'',color:'#888888'}));
+  $('#btnSaveClients').onclick = ()=>{
+    const next = Array.from(list.children).map(r=>{
+      const name = r.querySelector('input[type="text"]').value.trim();
+      const color = r.querySelector('input[type="color"]').value;
+      if(!name) return null;
+      // contraste automático
+      const c = color.replace('#',''); const R=parseInt(c.slice(0,2),16),G=parseInt(c.slice(2,4),16),B=parseInt(c.slice(4,6),16);
+      const yiq=((R*299)+(G*587)+(B*114))/1000; const text = yiq>=128?'#0a0a0a':'#ffffff';
+      return {name,color,text};
+    }).filter(Boolean);
+    if(next.length===0){ alert('Adicione pelo menos um cliente.'); return; }
+    clients = next; saveAll(); initClientsUI(); render(); modal.classList.add('hidden');
+  };
+  modal.classList.remove('hidden');
+  modal.onclick = (e)=>{ if(e.target===modal) modal.classList.add('hidden'); };
+};
+$('#btnClear').onclick = ()=> { ['f_q','f_client','f_status'].forEach(id=>{ const el=document.getElementById(id); el.value=''; }); render(); };
+$('#btnLock').onclick = ()=> { sessionStorage.removeItem('dipe_ok'); location.reload(); };
+
+/* ==== Start ==== */
+function start(){
+  showApp();
+  initClientsUI();
+  loadTasks();
+  render();
+}
+(function boot(){
+  if(sessionStorage.getItem('dipe_ok')) start(); else showLogin();
+})();
+</script>
+</body>
+</html>
