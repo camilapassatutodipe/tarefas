@@ -3,59 +3,65 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Painel Dipe — Simplificado</title>
+  <title>Painel Dipe — estável (local)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root{
-      --bg:#f6f5f0; --text:#111; --muted:#e7e3da; --soft:#fff; --accent:#ff573b; --shadow:0 8px 30px rgba(0,0,0,.08);
-      --todo:#fdf2d6; --doing:#e7f1ff; --done:#e8f7e7;
+      --bg:#f5f6f8; --text:#121212; --muted:#e6e6ea; --soft:#ffffff; --accent:#ff573b; --shadow:0 10px 30px rgba(0,0,0,.06);
     }
     *{box-sizing:border-box}
+    html,body{height:100%}
     body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif}
-    .container{max-width:1200px;margin:0 auto;padding:16px}
-    header{position:sticky;top:0;background:#111;color:#fff;box-shadow:var(--shadow);z-index:10}
-    header .container{display:flex;align-items:center;gap:12px}
-    .brand{display:flex;align-items:center;gap:10px;padding:10px 0}
-    .badge{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#ff7b6e;color:#fff;font-weight:800}
+    a{color:inherit}
+
+    /* Header */
+    header{position:sticky;top:0;background:#111;color:#fff;z-index:20;box-shadow:var(--shadow)}
+    header .wrap{max-width:1220px;margin:0 auto;padding:10px 16px;display:flex;gap:10px;align-items:center}
+    .brand{display:flex;gap:10px;align-items:center}
+    .badge{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#ff765f;color:#fff;font-weight:800}
     .grow{flex:1}
-    .btn{appearance:none;border:1px solid #bdbdbd;background:#ffffff;color:#111;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.04)}
+
+    /* Buttons com contraste alto */
+    .btn{appearance:none;border:1px solid #bdbdbd;background:#fff;color:#111;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.04)}
     .btn:hover{filter:brightness(0.98)}
     .btn.secondary{background:#111;color:#fff;border-color:#111}
     .btn.secondary:hover{filter:brightness(1.1)}
     .btn.ghost{background:#fff;color:#111;border-color:#bdbdbd}
     .btn.ghost:hover{background:#f4f4f4}
     .btn[disabled]{opacity:.6;cursor:not-allowed}
-    .filters{display:grid;grid-template-columns:1fr 160px 160px 160px 160px auto;gap:10px;align-items:end;margin:16px 0}
-    .filters label{font-size:12px;opacity:.75;margin-left:6px}
+
+    /* Layout principal */
+    .container{max-width:1220px;margin:0 auto;padding:16px}
+    .filters{display:grid;grid-template-columns:1fr 180px 180px 180px 180px auto;gap:10px;align-items:end;margin:16px 0}
+    .filters label{font-size:12px;opacity:.8;margin-left:6px}
     input,select,textarea{background:#fff;color:#111;border:1px solid var(--muted);border-radius:12px;padding:10px}
+    ::placeholder{color:#666}
+
+    /* Board */
     .board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
     .col{background:var(--soft);border-radius:16px;box-shadow:var(--shadow)}
     .col h3{margin:0;padding:12px 14px;border-bottom:1px solid var(--muted);display:flex;align-items:center;gap:8px}
-    .list{padding:12px;min-height:220px}
+    .list{padding:12px;min-height:260px}
     .card{background:#fff;border:1px solid var(--muted);border-radius:12px;padding:10px;margin:0 0 10px;box-shadow:0 4px 16px rgba(0,0,0,.04)}
     .tag{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:12px}
     .row{display:flex;gap:8px;align-items:center}
-    .right{margin-left:auto}
-    .hidden{display:none !important}
-    table{width:100%;border-collapse:collapse;background:#fff;border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
-    th,td{padding:10px;border-bottom:1px solid var(--muted);text-align:left;font-size:14px}
 
-    /* Login */
+    /* Painel/Login */
     #login{min-height:100vh;display:grid;place-items:center;padding:24px}
-    .panel{width:min(480px,92vw);background:#fff;border-radius:16px;box-shadow:var(--shadow);padding:18px}
+    .panel{width:min(500px,92vw);background:#fff;border-radius:16px;box-shadow:var(--shadow);padding:20px}
     .panel h1{margin:0 0 6px;font-size:20px}
-    .panel small{opacity:.7}
-    .panel .row{justify-content:space-between}
-    .panel .msg{font-size:12px;margin-top:8px;color:#065f46;min-height:16px}
+    .panel small{opacity:.75}
+    .panel .msg{font-size:12px;margin-top:8px;color:#b91c1c;min-height:16px}
 
-    @media (max-width:900px){.filters{grid-template-columns:1fr 1fr 1fr;}}
+    .hidden{display:none !important}
+
+    @media (max-width:920px){.filters{grid-template-columns:1fr 1fr 1fr}}
   </style>
 </head>
 <body>
-  <!-- LOGIN (aparece quando não autenticado) -->
+  <!-- LOGIN (senha simples) -->
   <section id="login" class="">
     <div class="panel">
       <div class="row" style="gap:10px">
@@ -76,13 +82,13 @@
     </div>
   </section>
 
-  <!-- APP (aparece quando autenticado) -->
+  <!-- APP -->
   <header id="appHeader" class="hidden">
-    <div class="container">
+    <div class="wrap">
       <div class="brand">
         <div class="badge">D</div>
         <div>
-          <div style="font-weight:700">Agência Dipe</div>
+          <div style="font-weight:800">Agência Dipe</div>
           <small>Painel de tarefas</small>
         </div>
       </div>
@@ -95,7 +101,8 @@
       </label>
       <button class="btn ghost" id="btnClients">Clientes</button>
       <button class="btn ghost" id="btnCollabs">Colaboradores</button>
-      <button class="btn" id="btnPrint">Imprimir</button> <button class="btn ghost" id="btnLock" title="Bloquear">Bloquear</button>
+      <button class="btn" id="btnPrint">Imprimir</button>
+      <button class="btn ghost" id="btnLock">Bloquear</button>
     </div>
   </header>
 
@@ -135,28 +142,22 @@
       <div class="col" data-status="Em Progresso"><h3>⚙️ Em Progresso</h3><div class="list"></div></div>
       <div class="col" data-status="Concluído"><h3>✅ Concluído</h3><div class="list"></div></div>
     </div>
-
-    <div style="height:18px"></div>
-    <table id="tbl" class="hidden">
-      <thead><tr><th>Tarefa</th><th>Cliente</th><th>Colaboradores</th><th>Status</th><th>Data</th><th>Atualizado</th><th></th></tr></thead>
-      <tbody></tbody>
-    </table>
   </section>
 
-  <!-- MODAL TAREFA -->
+  <!-- MODAIS -->
   <template id="tplTaskModal">
-    <div class="panel" style="width:min(620px,94vw)">
+    <div class="panel" style="width:min(640px,94vw)">
       <h1 id="taskTitle" style="font-size:18px;margin:0 0 8px">Nova tarefa</h1>
       <div class="row" style="gap:10px">
         <div style="flex:1">
           <label>Título</label>
           <input id="t_title" />
         </div>
-        <div style="width:180px">
+        <div style="width:200px">
           <label>Cliente</label>
           <select id="t_client"></select>
         </div>
-        <div style="width:180px">
+        <div style="width:200px">
           <label>Status</label>
           <select id="t_status">
             <option>A Fazer</option>
@@ -188,7 +189,6 @@
     </div>
   </template>
 
-  <!-- MODAL CLIENTES -->
   <template id="tplClients">
     <div class="panel" style="width:min(520px,94vw)">
       <h1 style="font-size:18px;margin:0 0 8px">Clientes</h1>
@@ -200,7 +200,6 @@
     </div>
   </template>
 
-  <!-- MODAL COLABS -->
   <template id="tplCollabs">
     <div class="panel" style="width:min(520px,94vw)">
       <h1 style="font-size:18px;margin:0 0 8px">Colaboradores</h1>
@@ -213,102 +212,39 @@
   </template>
 
   <script>
-  // ====== CONFIG ======
-  const TEAM = 'dipe';
-const PANEL_PASS = 'dipe2025!';
-const STORAGE_TASKS = 'dipe_tasks_v1';
-let tasks = [];
-// clientes e colaboradores (persistem localmente)
-let clients = JSON.parse(localStorage.getItem('dipe_clients')||'null') || [
-  {name:'Matec', color:'#02d1ce', text:'#0a0a0a'},
-  {name:'Construcione', color:'#000000', text:'#ffffff'},
-  {name:'Vertticom', color:'#d67a59', text:'#ffffff'},
-  {name:'LRocha', color:'#7b1e2b', text:'#ffffff'}
-];
-let collabs = JSON.parse(localStorage.getItem('dipe_collabs')||'null') || ['Camila','Alinne'];
-function contrast(hex){ try{ const c=hex.replace('#',''); const r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16); const yiq=((r*299)+(g*587)+(b*114))/1000; return yiq>=128?'#0a0a0a':'#ffffff'; }catch(e){ return '#111'; } }
-function clientTag(name){
-  const c = clients.find(x=>x.name===name) || {color:'#ddd', text:'#111'};
-  return `<span class="tag" style="background:${c.color};color:${c.text}">${name}</span>`;
-}
+  // ===== CONFIG & ESTADO =====
+  const PANEL_PASS = 'dipe2025!';
+  const STORAGE_TASKS = 'dipe_tasks_v1';
+  let tasks = [];
   let clients = JSON.parse(localStorage.getItem('dipe_clients')||'null') || [
-    {name:'Matec', color:'#02d1ce', text:'#0a0a0a'},
-    {name:'Construcione', color:'#000000', text:'#ffffff'},
-    {name:'Vertticom', color:'#d67a59', text:'#ffffff'},
-    {name:'LRocha', color:'#7b1e2b', text:'#ffffff'}
+    {name:'Matec',        color:'#02d1ce', text:'#0a0a0a'},
+    {name:'Costrucione',  color:'#000000', text:'#ffffff'},
+    {name:'Vertticom',    color:'#d67a59', text:'#ffffff'},
+    {name:'LRocha',       color:'#7b1e2b', text:'#ffffff'}
   ];
   let collabs = JSON.parse(localStorage.getItem('dipe_collabs')||'null') || ['Camila','Alinne'];
 
-  // ====== HELPERS ======
-  const $ = sel => document.querySelector(sel);
-  function clientTag(name){
-    const c = clients.find(x=>x.name===name) || {color:'#ddd', text:'#111'};
-    return `<span class="tag" style="background:${c.color};color:${c.text}">${name}</span>`;
-  }
-  function csvEscape(s){return '"'+String(s||'').replaceAll('"','""')+'"';}
-  function fmtDate(d){if(!d) return ''; const p=d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`}
+  // ===== HELPERS =====
+  const $  = (s)=> document.querySelector(s);
+  const $$ = (s)=> Array.from(document.querySelectorAll(s));
+  const uid = ()=> (crypto.randomUUID ? crypto.randomUUID() : (Date.now()+Math.random()).toString(16));
+  function csvEscape(s){return '"'+String(s??'').replaceAll('"','""')+'"'}
+  function fmtDate(d){ if(!d) return ''; const p=d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
+  function contrast(hex){ try{ const c=hex.replace('#',''); const r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16); const yiq=((r*299)+(g*587)+(b*114))/1000; return yiq>=128?'#0a0a0a':'#ffffff'; }catch(e){ return '#111'; } }
+  function clientTag(name){ const c = clients.find(x=>x.name===name) || {color:'#ddd', text:'#111'}; return `<span class="tag" style="background:${c.color};color:${c.text}">${name}</span>`; }
 
-  // ====== AUTH ======
-  function showLogin(){
-  document.getElementById('login').classList.remove('hidden');
-  document.getElementById('appHeader').classList.add('hidden');
-  document.getElementById('app').classList.add('hidden');
-}
-function showApp(){
-  document.getElementById('login').classList.add('hidden');
-  document.getElementById('appHeader').classList.remove('hidden');
-  document.getElementById('app').classList.remove('hidden');
-  load();
-}
-{
-    if(!sb){ $('#loginMsg').style.color='#b91c1c'; $('#loginMsg').textContent='Configure o Supabase (URL e Anon Key) no index.html.'; return; }
-    const { data:{ session } } = await sb.auth.getSession();
-    if(session){ showApp(); } else { showLogin(); }
-    sb.auth.onAuthStateChange((_evt, session)=>{ if(session) showApp(); });
-  }
-  function showLogin(){ $('#login').classList.remove('hidden'); $('#appHeader').classList.add('hidden'); $('#app').classList.add('hidden'); }
-  function showApp(){
-    document.getElementById('login').classList.add('hidden');
-    document.getElementById('appHeader').classList.remove('hidden');
-    document.getElementById('app').classList.remove('hidden');
-    load();
-    setupRealtime();
-  }
+  // ===== STORAGE local =====
+  function persist(){ localStorage.setItem(STORAGE_TASKS, JSON.stringify(tasks)); }
+  function load(){ try{ tasks = JSON.parse(localStorage.getItem(STORAGE_TASKS)||'[]'); }catch(e){ tasks=[]; } render(); buildFilters(); }
 
-  // ====== DATA (Local) ======
-function persist(){ localStorage.setItem(STORAGE_TASKS, JSON.stringify(tasks)); }
-function load(){ tasks = JSON.parse(localStorage.getItem(STORAGE_TASKS)||'[]'); render(); buildFilters(); }
-async function dbInsert(t){ t.id = (crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2)); tasks.unshift(t); persist(); return t; }
-async function dbUpdate(t){ const i = tasks.findIndex(x=>x.id===t.id); if(i>=0) tasks[i]=t; persist(); return t; }
-async function dbDelete(id){ tasks = tasks.filter(x=>x.id!==id); persist(); }
- if(error) alert('Erro ao excluir: '+error.message);}
-
-  // ====== DATA: Realtime setup ======
-  {
-    if(!sb) return; if(rtChannel){ sb.removeChannel(rtChannel); rtChannel=null; }
-    rtChannel = sb.channel('public:tasks').on('postgres_changes', { event:'*', schema:'public', table:'tasks' }, (payload)=>{
-      const row = payload.new || payload.old; if(!row || row.team!==TEAM) return;
-      if(payload.eventType==='INSERT' || payload.eventType==='UPDATE'){
-        const i = tasks.findIndex(x=>x.id===row.id); if(i>=0) tasks[i]=row; else tasks.unshift(row);
-      } else if(payload.eventType==='DELETE'){
-        tasks = tasks.filter(x=>x.id!==row.id);
-      }
-      render();
-    }).subscribe();
-  }
-
-  // ====== RENDER ======
+  // ===== RENDER =====
   function buildFilters(){
-    const fC=document.getElementById('fClient'); if(fC) fC.innerHTML = '<option value="">Todos</option>'+clients.map(c=>`<option>${c.name}</option>`).join('');
-    const fCo=document.getElementById('fCollab'); if(fCo) fCo.innerHTML = '<option value="">Todos</option>'+Array.from(new Set(collabs)).map(c=>`<option>${c}</option>`).join('');
-    const dl=document.getElementById('dlCollabs'); if(dl) dl.innerHTML = Array.from(new Set(collabs)).map(c=>`<option value="${c}"></option>`).join('');
-  }</option>`).join('');
-    $('#fCollab').innerHTML = '<option value="">Todos</option>'+Array.from(new Set(collabs)).map(c=>`<option>${c}</option>`).join('');
+    $('#fClient').innerHTML = '<option value="">Todos</option>' + clients.map(c=>`<option>${c.name}</option>`).join('');
+    $('#fCollab').innerHTML = '<option value="">Todos</option>' + Array.from(new Set(collabs)).map(c=>`<option>${c}</option>`).join('');
     $('#dlCollabs').innerHTML = Array.from(new Set(collabs)).map(c=>`<option value="${c}"></option>`).join('');
   }
   function filtered(){
-    const q = $('#q').value.toLowerCase().trim();
-    const fc=$('#fClient').value, fco=$('#fCollab').value, fs=$('#fStatus').value, fd=$('#fDate').value;
+    const q=$('#q').value.toLowerCase().trim(); const fc=$('#fClient').value; const fco=$('#fCollab').value; const fs=$('#fStatus').value; const fd=$('#fDate').value;
     return tasks.filter(t=>{
       const mQ=!q || (t.title+t.desc).toLowerCase().includes(q);
       const mC=!fc || t.client===fc; const mCo=!fco || (t.collabs||[]).includes(fco); const mS=!fs || t.status===fs; const mD=!fd || (t.date||'')===fd;
@@ -316,18 +252,14 @@ async function dbDelete(id){ tasks = tasks.filter(x=>x.id!==id); persist(); }
   }
   function render(){
     const arr = filtered();
-    const colTodo = document.querySelector('[data-status="A Fazer"] .list');
-    const colDoing = document.querySelector('[data-status="Em Progresso"] .list');
-    const colDone = document.querySelector('[data-status="Concluído"] .list');
-    colTodo.innerHTML = colDoing.innerHTML = colDone.innerHTML = '';
+    const todo=$('[data-status="A Fazer"] .list'); const doing=$('[data-status="Em Progresso"] .list'); const done=$('[data-status="Concluído"] .list');
+    todo.innerHTML = doing.innerHTML = done.innerHTML = '';
     for(const t of arr){
-      if(t.status==='Backlog') continue;
-      const el = document.createElement('div'); el.className='card'; el.innerHTML = `
-        <div class="row">
-          <strong class="grow">${t.title}</strong>
-          ${clientTag(t.client)}
-        </div>
-        <div style="font-size:12px;opacity:.8;margin-top:6px">${(t.collabs||[]).join(', ')}</div>
+      if(t.status==='Backlog') continue; // backlog fora do board
+      const el=document.createElement('div'); el.className='card';
+      el.innerHTML = `
+        <div class="row"><strong style="flex:1">${t.title}</strong>${clientTag(t.client)}</div>
+        <div style="font-size:12px;opacity:.85;margin-top:6px">${(t.collabs||[]).join(', ')}</div>
         ${t.date?`<div style="font-size:12px;opacity:.7;margin-top:4px">${fmtDate(t.date)}</div>`:''}
         <div class="row" style="justify-content:flex-end;margin-top:8px;gap:8px">
           <select data-act="status">
@@ -339,59 +271,15 @@ async function dbDelete(id){ tasks = tasks.filter(x=>x.id!==id); persist(); }
           <button class="btn ghost" data-act="edit">Editar</button>
         </div>`;
       el.querySelector('[data-act="edit"]').onclick=()=> openTask(t);
-      el.querySelector('[data-act="status"]').onchange=async (e)=>{ t.status=e.target.value; t.updated=new Date().toISOString(); const row=await dbUpdate(t); if(row){ const i=tasks.findIndex(x=>x.id===row.id); tasks[i]=row; render(); }}
-      if(t.status==='A Fazer') colTodo.appendChild(el); else if(t.status==='Em Progresso') colDoing.appendChild(el); else colDone.appendChild(el);
-    }
-
-    // tabela de entregas
-    const tbl=$('#tbl'); const tb=tbl.querySelector('tbody'); tb.innerHTML='';
-    for(const t of arr.slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''))){
-      const tr=document.createElement('tr'); tr.innerHTML = `
-        <td><strong>${t.title}</strong><div style="opacity:.7;font-size:12px">${t.desc||''}</div></td>
-        <td>${clientTag(t.client)}</td>
-        <td>${(t.collabs||[]).join(', ')}</td>
-        <td>${t.status}</td>
-        <td>${fmtDate(t.date||'')}</td>
-        <td>${new Date(t.updated||Date.now()).toLocaleString('pt-BR')}</td>
-        <td><button class="btn ghost" data-edit="${t.id}">Editar</button></td>`;
-      tb.appendChild(tr);
-      tr.querySelector('[data-edit]').onclick=()=> openTask(tasks.find(x=>x.id===t.id));
+      el.querySelector('[data-act="status"]').onchange=(e)=>{ t.status=e.target.value; t.updated=new Date().toISOString(); persist(); render(); };
+      if(t.status==='A Fazer') todo.appendChild(el); else if(t.status==='Em Progresso') doing.appendChild(el); else done.appendChild(el);
     }
   }
 
-  // ====== UI HANDLERS ======
-  $('#q').addEventListener('input', render);
-  ['fClient','fCollab','fStatus','fDate'].forEach(id=> document.getElementById(id).addEventListener('change', render));
-  $('#btnClear').onclick=()=>{ ['q','fClient','fCollab','fStatus','fDate'].forEach(id=>{const el=document.getElementById(id); el.value='';}); render(); };
-  $('#btnPrint').onclick=()=> window.print();
-  $('#btnExportCsv').onclick=()=>{
-    const arr = filtered();
-    const head=['id','title','client','collabs','status','date','desc','updated'];
-    const rows=[head.join(',')].concat(arr.map(t=>[t.id,t.title,t.client,(t.collabs||[]).join('|'),t.status,t.date,t.desc,t.updated].map(csvEscape).join(',')));
-    const blob=new Blob([rows.join('
-')],{type:'text/csv'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tarefas.csv'; a.click();
-  };
-  $('#btnExportJson').onclick=()=>{
-    const arr = filtered(); const blob=new Blob([JSON.stringify(arr,null,2)],{type:'application/json'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tarefas.json'; a.click();
-  };
-  $('#importJson').addEventListener('change', async (e)=>{
-    const file=e.target.files[0]; if(!file) return; const text=await file.text(); let data=[]; try{data=JSON.parse(text);}catch(err){alert('JSON inválido');return}
-    if(!Array.isArray(data)){ alert('Esperado um array de tarefas'); return; }
-    if(!confirm('Importar '+data.length+' tarefas para o time?')) return;
-    for(const x of data){ const t={ id: undefined, title:x.title||'Sem título', client:x.client||clients[0]?.name||'Cliente', status:x.status||'A Fazer', date:x.date||null, collabs:x.collabs||[], desc:x.desc||'', updated:new Date().toISOString(), team:TEAM };
-      const row=await dbInsert(t); if(row) tasks.push(row);
-    }
-    render(); e.target.value='';
-  });
-   location.reload(); };
-
-  // ====== TASK MODAL ======
+  // ===== MODAL TAREFA =====
   function openTask(t){
     const tpl=$('#tplTaskModal').content.cloneNode(true); const panel=tpl.querySelector('.panel');
-    const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel);
-    document.body.appendChild(wrap);
+    const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel); document.body.appendChild(wrap);
     panel.querySelector('#taskTitle').textContent = t? 'Editar tarefa':'Nova tarefa';
     const sel=panel.querySelector('#t_client'); sel.innerHTML = clients.map(c=>`<option ${t&&t.client===c.name?'selected':''}>${c.name}</option>`).join('');
     panel.querySelector('#t_title').value = t?.title||'';
@@ -402,49 +290,44 @@ async function dbDelete(id){ tasks = tasks.filter(x=>x.id!==id); persist(); }
     panel.querySelector('#btnDel').style.display = t? 'inline-flex':'none';
 
     wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
-    panel.querySelector('#btnSave').onclick = async ()=>{
+    panel.querySelector('#btnSave').onclick = ()=>{
       const payload={
-        id: t?.id,
+        id: t?.id || uid(),
         title: panel.querySelector('#t_title').value.trim()||'Sem título',
         client: panel.querySelector('#t_client').value,
         status: panel.querySelector('#t_status').value,
         date: panel.querySelector('#t_date').value||null,
         collabs: panel.querySelector('#t_collabs').value.split(',').map(s=>s.trim()).filter(Boolean),
         desc: panel.querySelector('#t_desc').value.trim(),
-        updated: new Date().toISOString(),
-        team: TEAM
+        updated: new Date().toISOString()
       };
-      if(payload.id){ const row=await dbUpdate(payload); if(row){ const i=tasks.findIndex(x=>x.id===row.id); tasks[i]=row; }}
-      else { const row=await dbInsert(payload); if(row) tasks.unshift(row); }
-      // Atualiza lista de colaboradores
+      if(t){ const i=tasks.findIndex(x=>x.id===t.id); tasks[i]=payload; }
+      else { tasks.unshift(payload); }
+      // atualiza colabs
       payload.collabs.forEach(c=>{ if(c && !collabs.includes(c)) collabs.push(c); });
       localStorage.setItem('dipe_collabs', JSON.stringify(collabs));
-      buildFilters(); render(); wrap.remove();
+      persist(); buildFilters(); render(); wrap.remove();
     };
-    panel.querySelector('#btnDel').onclick = async ()=>{ if(t && confirm('Excluir esta tarefa?')){ await dbDelete(t.id); tasks = tasks.filter(x=>x.id!==t.id); render(); wrap.remove(); } };
+    panel.querySelector('#btnDel').onclick = ()=>{ if(t && confirm('Excluir esta tarefa?')){ tasks = tasks.filter(x=>x.id!==t.id); persist(); render(); wrap.remove(); } };
   }
-  $('#btnNew').onclick=()=> openTask(null);
 
-  // ====== CLIENTES MODAL ======
+  // ===== MODAIS: CLIENTES & COLABS =====
   function openClients(){
     const tpl=$('#tplClients').content.cloneNode(true); const panel=tpl.querySelector('.panel');
-    const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel);
-    document.body.appendChild(wrap);
+    const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel); document.body.appendChild(wrap);
     const list=panel.querySelector('#clientsList');
     function row(c){ const r=document.createElement('div'); r.className='row'; r.style.gap='8px'; r.innerHTML=`<input placeholder="Nome" value="${c?.name||''}" style="flex:1"><input type="color" value="${c?.color||'#888888'}" style="width:100px"><button class="btn ghost">🗑️</button>`; r.querySelector('button').onclick=()=> r.remove(); return r; }
     clients.forEach(c=> list.appendChild(row(c)));
     panel.querySelector('#btnAddClient').onclick=()=> list.appendChild(row({name:'',color:'#888888'}));
-    panel.querySelector('#btnSaveClients').onclick=()=>{ clients = Array.from(list.querySelectorAll('.row')).map(r=>{ const name=r.querySelector('input[type="text"]').value.trim(); const color=r.querySelector('input[type="color"]').value; if(!name) return null; const text = contrast(color); return {name, color, text}; }).filter(Boolean); localStorage.setItem('dipe_clients', JSON.stringify(clients)); buildFilters(); render(); wrap.remove(); };
+    panel.querySelector('#btnSaveClients').onclick=()=>{
+      clients = Array.from(list.querySelectorAll('.row')).map(r=>{ const name=r.querySelector('input[type="text"]').value.trim(); const color=r.querySelector('input[type="color"]').value; if(!name) return null; const text = contrast(color); return {name, color, text}; }).filter(Boolean);
+      localStorage.setItem('dipe_clients', JSON.stringify(clients)); buildFilters(); render(); wrap.remove();
+    };
     wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
   }
-  function contrast(hex){ try{ const c=hex.replace('#',''); const r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16); const yiq=((r*299)+(g*587)+(b*114))/1000; return yiq>=128?'#0a0a0a':'#ffffff'; }catch(e){ return '#111'; } }
-  $('#btnClients').onclick=openClients;
-
-  // ====== COLABS MODAL ======
   function openCollabs(){
     const tpl=$('#tplCollabs').content.cloneNode(true); const panel=tpl.querySelector('.panel');
-    const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel);
-    document.body.appendChild(wrap);
+    const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel); document.body.appendChild(wrap);
     const list=panel.querySelector('#collabsList');
     function row(name){ const r=document.createElement('div'); r.className='row'; r.style.gap='8px'; r.innerHTML=`<input placeholder="Nome do colaborador" value="${name||''}" style="flex:1"><button class="btn ghost">🗑️</button>`; r.querySelector('button').onclick=()=> r.remove(); return r; }
     collabs.forEach(c=> list.appendChild(row(c)));
@@ -452,99 +335,49 @@ async function dbDelete(id){ tasks = tasks.filter(x=>x.id!==id); persist(); }
     panel.querySelector('#btnSaveCollabs').onclick=()=>{ collabs = Array.from(list.querySelectorAll('input')).map(i=>i.value.trim()).filter(Boolean); localStorage.setItem('dipe_collabs', JSON.stringify(collabs)); buildFilters(); render(); wrap.remove(); };
     wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
   }
-  $('#btnCollabs').onclick=openCollabs;
 
-  // ====== LOGIN actions ======
-  // ====== SENHA ======
-function initLogin(){
-  const btn = document.getElementById('btnEnter');
-  const pass = document.getElementById('pass');
-  const msg  = document.getElementById('loginMsg');
-  function onEnter(){
-    const v = (pass?.value||'').trim();
-    if(v === PANEL_PASS){
-      sessionStorage.setItem('dipe_ok','1');
-      if(msg) msg.textContent='';
-      showApp();
-    }else{
-      if(msg){ msg.style.color='#b91c1c'; msg.textContent='Senha incorreta'; }
-    }
-  }
-  btn && btn.addEventListener('click', onEnter);
-  pass && pass.addEventListener('keydown', (e)=>{ if(e.key==='Enter') onEnter(); });
-}
+  // ===== AÇÕES TOPO & LOGIN =====
+  function showApp(){ document.getElementById('login').classList.add('hidden'); document.getElementById('appHeader').classList.remove('hidden'); document.getElementById('app').classList.remove('hidden'); load(); }
+  function showLogin(){ document.getElementById('login').classList.remove('hidden'); document.getElementById('appHeader').classList.add('hidden'); document.getElementById('app').classList.add('hidden'); }
 
-// inicia
-initLogin();
-const msg = document.getElementById('loginMsg');
-      if(!sb){ msg.style.color='#b91c1c'; msg.textContent='Configure SUPABASE_URL e SUPABASE_ANON_KEY no index.html.'; return; }
-      const email=document.getElementById('email').value.trim();
-      if(!email){ msg.style.color='#b91c1c'; msg.textContent='Digite seu e-mail'; return; }
-      if(!email.endsWith(DOMAIN)){ msg.style.color='#b91c1c'; msg.textContent='Use um e-mail '+DOMAIN; return; }
-      const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: SITE_URL } });
-      msg.style.color = error? '#b91c1c':'#065f46';
-      msg.textContent = error? ('Erro: '+error.message) : ('Enviamos um link de acesso para '+email+'. Confira a caixa de entrada/spam.');
-    }catch(err){
-      const msg = document.getElementById('loginMsg');
-      msg.style.color='#b91c1c'; msg.textContent='Erro inesperado: '+(err?.message||err);
-    }
-  }
-  document.getElementById('btnMagic')?.addEventListener('click', sendMagic);
-  document.getElementById('email')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') sendMagic(e); });
-  $('#btnLogout').onclick = async ()=>{
-    if(sb){ if(rtChannel){ sb.removeChannel(rtChannel); rtChannel=null; } await sb.auth.signOut(); }
-    location.reload();
-  };
+  // binds principais (robustos)
+  document.getElementById('btnEnter').addEventListener('click', ()=>{
+    const v=document.getElementById('pass').value.trim();
+    if(v===PANEL_PASS){ sessionStorage.setItem('dipe_ok','1'); document.getElementById('loginMsg').textContent=''; showApp(); }
+    else{ document.getElementById('loginMsg').textContent='Senha incorreta'; }
+  });
+  document.getElementById('pass').addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('btnEnter').click(); });
+
+  document.getElementById('btnNew').addEventListener('click', ()=> openTask(null));
+  document.getElementById('btnClients').addEventListener('click', openClients);
+  document.getElementById('btnCollabs').addEventListener('click', openCollabs);
+  document.getElementById('btnPrint').addEventListener('click', ()=> window.print());
+  document.getElementById('btnLock').addEventListener('click', ()=>{ sessionStorage.removeItem('dipe_ok'); location.reload(); });
+
+  document.getElementById('btnExportCsv').addEventListener('click', ()=>{
+    const arr = filtered(); const head=['id','title','client','collabs','status','date','desc','updated'];
+    const rows=[head.join(',')].concat(arr.map(t=>[t.id,t.title,t.client,(t.collabs||[]).join('|'),t.status,t.date,t.desc,t.updated].map(csvEscape).join(',')));
+    const blob=new Blob([rows.join('
+')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tarefas.csv'; a.click();
+  });
+  document.getElementById('btnExportJson').addEventListener('click', ()=>{
+    const blob=new Blob([JSON.stringify(filtered(),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tarefas.json'; a.click();
+  });
+  document.getElementById('importJson').addEventListener('change', async (e)=>{
+    const file=e.target.files[0]; if(!file) return; const text=await file.text(); let data=[]; try{ data=JSON.parse(text); }catch(err){ alert('JSON inválido'); return; }
+    if(!Array.isArray(data)){ alert('Esperado um array de tarefas'); return; }
+    if(!confirm('Importar '+data.length+' tarefas?')) return;
+    for(const x of data){ tasks.push({ id: uid(), title:x.title||'Sem título', client:x.client||clients[0]?.name||'Cliente', status:x.status||'A Fazer', date:x.date||null, collabs:x.collabs||[], desc:x.desc||'', updated:new Date().toISOString() }); }
+    persist(); render(); e.target.value='';
+  });
+
+  // filtros
+  ['q','fClient','fCollab','fStatus','fDate'].forEach(id=> document.getElementById(id).addEventListener('input', render));
+  document.getElementById('btnClear').addEventListener('click', ()=>{ ['q','fClient','fCollab','fStatus','fDate'].forEach(id=>{const el=document.getElementById(id); el.value='';}); render(); });
 
   // start
-  if(sessionStorage.getItem('dipe_ok')){ showApp(); } else { showLogin(); }
-initLogin();
-buildFilters();
-render();
-  </script>
-  
-  <!-- Fix login: listener simples e independente -->
-  <script>
-  (function(){
-    function $(id){return document.getElementById(id)}
-    const PASS = (window.PANEL_PASS || 'dipe2025!');
-
-    function toggle(id, on){ const el=$(id); if(!el) return; el.classList.toggle('hidden', !on); }
-    function showApp(){ toggle('login', false); toggle('appHeader', true); toggle('app', true); try{ if(typeof load==='function') load(); }catch(e){} }
-    function showLogin(){ toggle('login', true); toggle('appHeader', false); toggle('app', false); }
-
-    // sessão existente
-    if(sessionStorage.getItem('dipe_ok')==='1'){ showApp(); } else { showLogin(); }
-
-    const btn = $('btnEnter'); const pass = $('pass'); const msg = $('loginMsg');
-    function go(e){ if(e) e.preventDefault(); const v=(pass&&pass.value||'').trim(); if(v===PASS){ sessionStorage.setItem('dipe_ok','1'); if(msg) msg.textContent=''; showApp(); } else { if(msg){ msg.style.color='#b91c1c'; msg.textContent='Senha incorreta'; } } }
-    if(btn){ btn.disabled=false; btn.addEventListener('click', go); }
-    if(pass){ pass.addEventListener('keydown', (e)=>{ if(e.key==='Enter') go(e); }); }
-  })();
-    // Reforce binds principais caso algo tenha sido removido
-  (function ensureBinds(){
-    const bNew=document.getElementById('btnNew'); if(bNew && !bNew.__bound){ bNew.__bound=true; bNew.addEventListener('click', ()=> openTask(null)); }
-    const bCli=document.getElementById('btnClients'); if(bCli && !bCli.__bound){ bCli.__bound=true; bCli.addEventListener('click', ()=>{
-      const tpl=document.getElementById('tplClients').content.cloneNode(true); const panel=tpl.querySelector('.panel');
-      const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel); document.body.appendChild(wrap);
-      const list=panel.querySelector('#clientsList');
-      function row(c){ const r=document.createElement('div'); r.className='row'; r.style.gap='8px'; r.innerHTML=`<input placeholder="Nome" value="${c?.name||''}" style="flex:1"><input type="color" value="${c?.color||'#888888'}" style="width:100px"><button class="btn ghost">🗑️</button>`; r.querySelector('button').onclick=()=> r.remove(); return r; }
-      clients.forEach(c=> list.appendChild(row(c)));
-      panel.querySelector('#btnAddClient').onclick=()=> list.appendChild(row({name:'',color:'#888888'}));
-      panel.querySelector('#btnSaveClients').onclick=()=>{ clients = Array.from(list.querySelectorAll('.row')).map(r=>{ const name=r.querySelector('input[type="text"]').value.trim(); const color=r.querySelector('input[type="color"]').value; if(!name) return null; const text = contrast(color); return {name, color, text}; }).filter(Boolean); localStorage.setItem('dipe_clients', JSON.stringify(clients)); buildFilters(); render(); wrap.remove(); };
-      wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
-    }); }
-    const bCol=document.getElementById('btnCollabs'); if(bCol && !bCol.__bound){ bCol.__bound=true; bCol.addEventListener('click', ()=>{
-      const tpl=document.getElementById('tplCollabs').content.cloneNode(true); const panel=tpl.querySelector('.panel');
-      const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel); document.body.appendChild(wrap);
-      const list=panel.querySelector('#collabsList');
-      function row(name){ const r=document.createElement('div'); r.className='row'; r.style.gap='8px'; r.innerHTML=`<input placeholder="Nome do colaborador" value="${name||''}" style="flex:1"><button class="btn ghost">🗑️</button>`; r.querySelector('button').onclick=()=> r.remove(); return r; }
-      collabs.forEach(c=> list.appendChild(row(c)));
-      panel.querySelector('#btnAddCollab').onclick=()=> list.appendChild(row(''));
-      panel.querySelector('#btnSaveCollabs').onclick=()=>{ collabs = Array.from(list.querySelectorAll('input')).map(i=>i.value.trim()).filter(Boolean); localStorage.setItem('dipe_collabs', JSON.stringify(collabs)); buildFilters(); render(); wrap.remove(); };
-      wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
-    }); }
-  })();
+  if(sessionStorage.getItem('dipe_ok')) showApp(); else showLogin();
+  buildFilters(); render();
   </script>
 </body>
 </html>
