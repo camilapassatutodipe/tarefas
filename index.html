@@ -3,292 +3,336 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Painel Dipe — Reset Estável</title>
+<title>Painel Dipe — Kanban + Diário/Semanal (Local)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#f6f7fb;--txt:#111;--mut:#e6e6ee;--soft:#fff;--dark:#111;--shadow:0 8px 30px rgba(0,0,0,.08)}
-  *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--txt)}
-  header{position:sticky;top:0;background:var(--dark);color:#fff;box-shadow:var(--shadow);z-index:9}
-  .wrap{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
+  :root{--bg:#f6f7fb;--txt:#121212;--mut:#e6e6ee;--soft:#fff;--dark:#111;--shadow:0 8px 30px rgba(0,0,0,.08)}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--txt);font-family:Inter,system-ui,Arial,sans-serif}
+  header{position:sticky;top:0;background:var(--dark);color:#fff;box-shadow:var(--shadow);z-index:10}
+  .wrap{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
+  .brand{display:flex;gap:10px;align-items:center}
   .badge{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#ff6b5f;font-weight:800}
   .grow{flex:1}
   .btn{appearance:none;border:1px solid #bdbdbd;background:#fff;color:#111;border-radius:12px;padding:9px 12px;font-weight:600;cursor:pointer}
   .btn:hover{filter:brightness(.98)} .btn.secondary{background:#111;color:#fff;border-color:#111}
   .btn.ghost{background:#fff;color:#111;border-color:#bdbdbd}
-  .container{max-width:1100px;margin:0 auto;padding:16px}
+  .container{max-width:1200px;margin:0 auto;padding:16px}
   input,select,textarea{width:100%;padding:10px;border:1px solid var(--mut);border-radius:10px;background:#fff;color:#111}
-  .grid{display:grid;gap:10px}
-  .filters{grid-template-columns:1fr 180px 160px auto}
+  .filters{display:grid;grid-template-columns:1fr 180px 160px 160px 180px auto;gap:10px;align-items:end;margin:14px 0}
   .filters label{font-size:12px;opacity:.8;margin-left:6px}
-  table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .col{background:var(--soft);border-radius:16px;box-shadow:var(--shadow)}
+  .col h3{margin:0;padding:12px 14px;border-bottom:1px solid var(--mut);display:flex;gap:8px;align-items:center}
+  .list{padding:12px;min-height:260px}
+  .card{background:#fff;border:1px solid var(--mut);border-radius:12px;padding:10px;margin:0 0 10px;box-shadow:0 4px 16px rgba(0,0,0,.04)}
+  .row{display:flex;gap:8px;align-items:center}
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:12px}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-top:16px}
   th,td{padding:10px;border-bottom:1px solid var(--mut);text-align:left;font-size:14px}
-  .panel{background:#fff;border-radius:14px;box-shadow:var(--shadow);padding:14px}
-  .row{display:flex;gap:10px;align-items:center}
+  .panel{background:#fff;border-radius:16px;box-shadow:var(--shadow);padding:16px}
   .hidden{display:none!important}
-  #login{min-height:100vh;display:grid;place-items:center;padding:24px}
-  .tag{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid rgba(0,0,0,.05)}
-  @media (max-width:900px){.filters{grid-template-columns:1fr 1fr}}
+  @media (max-width:980px){.filters{grid-template-columns:1fr 1fr 1fr}}
 </style>
 </head>
 <body>
 
-<!-- LOGIN (só senha) -->
-<section id="login">
-  <div class="panel" style="width:min(480px,92vw)">
-    <div class="row">
-      <div class="badge">D</div>
-      <div><div style="font-weight:700">Agência Dipe</div><small>Digite a senha para acessar</small></div>
-    </div>
-    <div style="height:8px"></div>
-    <label for="pass">Senha</label>
-    <input id="pass" type="password" placeholder="••••••••">
-    <div style="height:8px"></div>
-    <button class="btn" id="btnLogin" type="button" style="width:100%">Entrar</button>
-    <div id="loginMsg" style="color:#b91c1c;font-size:12px;margin-top:8px;min-height:16px"></div>
-  </div>
-</section>
-
-<!-- APP -->
-<header id="appHeader" class="hidden">
+<header>
   <div class="wrap">
-    <div class="row">
+    <div class="brand">
       <div class="badge">D</div>
       <div><div style="font-weight:800">Agência Dipe</div><small>Painel de tarefas</small></div>
     </div>
     <div class="grow"></div>
     <button class="btn secondary" id="btnNew">+ Nova tarefa</button>
-    <button class="btn" id="btnExport">Exportar JSON</button>
-    <label class="btn ghost">Importar JSON<input id="fileImport" type="file" accept="application/json" style="display:none"></label>
+    <button class="btn" id="btnExportCsv">Exportar CSV</button>
+    <button class="btn" id="btnExportJson">Backup JSON</button>
+    <label class="btn ghost">Importar JSON<input type="file" id="importJson" accept="application/json" style="display:none"></label>
     <button class="btn ghost" id="btnClients">Clientes</button>
-    <button class="btn ghost" id="btnLock">Bloquear</button>
+    <button class="btn ghost" id="btnCollabs">Colaboradores</button>
+    <button class="btn" id="btnPrint">Imprimir</button>
   </div>
 </header>
 
-<section id="app" class="container hidden">
-  <!-- Form simples inline para criar/editar -->
-  <div class="panel" id="formPanel">
-    <div class="row" style="justify-content:space-between">
-      <strong id="formTitle">Nova tarefa</strong>
-      <div class="row">
-        <button class="btn ghost" id="btnCancel" type="button" title="Limpar/Cancelar">Cancelar</button>
-        <button class="btn" id="btnSave" type="button">Salvar</button>
-      </div>
-    </div>
-    <div class="grid" style="grid-template-columns:1fr 180px 150px 150px">
-      <div><label>Título</label><input id="t_title" placeholder="Ex.: Landing Matec - campanha X"></div>
-      <div><label>Cliente</label><select id="t_client"></select></div>
-      <div><label>Status</label>
-        <select id="t_status"><option>A Fazer</option><option>Em Progresso</option><option>Concluído</option><option>Backlog</option></select>
-      </div>
-      <div><label>Data</label><input id="t_date" type="date"></div>
-    </div>
-    <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:8px">
-      <div><label>Colaboradores (separe por vírgula)</label><input id="t_collabs" placeholder="Camila, Alinne"></div>
-      <div><label>Descrição</label><input id="t_desc" placeholder="Resumo rápido da tarefa"></div>
-    </div>
-    <input id="t_id" type="hidden">
-  </div>
-
+<section class="container">
   <!-- Filtros -->
-  <div class="grid filters" style="margin-top:14px">
-    <div><label for="f_q">🔎 Pesquisar</label><input id="f_q" placeholder="título/descrição"></div>
-    <div><label for="f_client">🏢 Cliente</label><select id="f_client"><option value="">Todos</option></select></div>
-    <div><label for="f_status">🏷️ Status</label>
-      <select id="f_status"><option value="">Todos</option><option>A Fazer</option><option>Em Progresso</option><option>Concluído</option><option>Backlog</option></select>
+  <div class="filters">
+    <div><label for="q">🔎 Pesquisar</label><input id="q" placeholder="título ou descrição"></div>
+    <div><label for="filterClient">🏢 Cliente</label><select id="filterClient"><option value="">Todos</option></select></div>
+    <div><label for="filterCollab">👤 Colaborador</label><select id="filterCollab"><option value="">Todos</option></select></div>
+    <div><label for="filterStatus">🏷️ Status</label>
+      <select id="filterStatus"><option value="">Todos</option><option>A Fazer</option><option>Em Progresso</option><option>Concluído</option><option>Backlog</option></select>
+    </div>
+    <div>
+      <label for="viewMode">👁️ Visão</label>
+      <select id="viewMode">
+        <option value="geral">Geral (Kanban)</option>
+        <option value="diario">Diário</option>
+        <option value="semanal">Semanal</option>
+      </select>
+      <div id="dateWrap" class="row" style="margin-top:6px">
+        <input id="dateDaily" type="date" class="" />
+      </div>
     </div>
     <div style="align-self:end"><button class="btn ghost" id="btnClear">Limpar</button></div>
   </div>
 
-  <!-- Lista -->
+  <!-- Board -->
+  <div class="board" id="board">
+    <div class="col" data-status="A Fazer"><h3>🗂️ A Fazer</h3><div class="list"></div></div>
+    <div class="col" data-status="Em Progresso"><h3>⚙️ Em Progresso</h3><div class="list"></div></div>
+    <div class="col" data-status="Concluído"><h3>✅ Concluído</h3><div class="list"></div></div>
+  </div>
+
+  <!-- Entregas (tabela geral) -->
   <table id="tbl">
-    <thead><tr><th>Título</th><th>Cliente</th><th>Colaboradores</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Tarefa</th><th>Cliente</th><th>Colaboradores</th><th>Status</th><th>Data</th><th>Atualizado</th><th></th></tr></thead>
     <tbody></tbody>
   </table>
 </section>
 
-<!-- Modal simples de Clientes -->
-<section id="clientsModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:20">
-  <div class="panel" style="width:min(500px,92vw)">
-    <div class="row" style="justify-content:space-between">
-      <strong>Clientes</strong>
-      <div class="row"><button class="btn ghost" id="btnAddClient">+ Adicionar</button>
-      <button class="btn" id="btnSaveClients">Salvar</button></div>
+<!-- MODAL TAREFA -->
+<template id="tplTaskModal">
+  <div class="panel" style="width:min(640px,94vw)">
+    <h3 id="taskTitle" style="margin:0 0 8px">Nova tarefa</h3>
+    <div class="row" style="gap:10px">
+      <div style="flex:1"><label>Título</label><input id="t_title"></div>
+      <div style="width:200px"><label>Cliente</label><select id="t_client"></select></div>
+      <div style="width:200px"><label>Status</label>
+        <select id="t_status"><option>A Fazer</option><option>Em Progresso</option><option>Concluído</option><option>Backlog</option></select>
+      </div>
     </div>
-    <div id="clientsList" class="grid" style="margin-top:10px"></div>
+    <div class="row" style="gap:10px;margin-top:10px">
+      <div style="width:180px"><label>Data</label><input id="t_date" type="date"></div>
+      <div class="grow"><label>Colaboradores (separe por vírgula)</label><input id="t_collabs" list="dlCollabs"><datalist id="dlCollabs"></datalist></div>
+    </div>
+    <div style="margin-top:10px"><label>Descrição</label><textarea id="t_desc" rows="4"></textarea></div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn ghost" id="btnDel">Excluir</button>
+      <button class="btn" id="btnSave">Salvar</button>
+    </div>
   </div>
-</section>
+</template>
+
+<!-- MODAL CLIENTES -->
+<template id="tplClients">
+  <div class="panel" style="width:min(520px,94vw)">
+    <h3 style="margin:0 0 8px">Clientes</h3>
+    <div id="clientsList" class="grid" style="gap:8px"></div>
+    <div class="row" style="justify-content:space-between;margin-top:12px">
+      <button class="btn ghost" id="btnAddClient">+ Adicionar</button>
+      <button class="btn" id="btnSaveClients">Salvar</button>
+    </div>
+  </div>
+</template>
+
+<!-- MODAL COLABS -->
+<template id="tplCollabs">
+  <div class="panel" style="width:min(520px,94vw)">
+    <h3 style="margin:0 0 8px">Colaboradores</h3>
+    <div id="collabsList" class="grid" style="gap:8px"></div>
+    <div class="row" style="justify-content:space-between;margin-top:12px">
+      <button class="btn ghost" id="btnAddCollab">+ Adicionar</button>
+      <button class="btn" id="btnSaveCollabs">Salvar</button>
+    </div>
+  </div>
+</template>
 
 <script>
-/* ==== CONFIG (mude a senha aqui) ==== */
-const PANEL_PASS = 'dipe2025!';
-const STORE_TASKS = 'dipe_tasks_v1';
-const STORE_CLIENTS = 'dipe_clients_v1';
+/* ====== Estado/Persistência ====== */
+const LS_TASKS = 'dipe_tasks_v1';
+const LS_CLIENTS = 'dipe_clients_v1';
+const LS_COLLABS = 'dipe_collabs_v1';
 
-/* ==== Estado ==== */
-let tasks = [];
-let clients = JSON.parse(localStorage.getItem(STORE_CLIENTS)||'null') || [
-  {name:'Matec',        color:'#02d1ce', text:'#0a0a0a'},
-  {name:'Costrucione',  color:'#000000', text:'#ffffff'},
-  {name:'Vertticom',    color:'#d67a59', text:'#ffffff'},
-  {name:'LRocha',       color:'#7b1e2b', text:'#ffffff'},
+let tasks = JSON.parse(localStorage.getItem(LS_TASKS) || '[]');
+let clients = JSON.parse(localStorage.getItem(LS_CLIENTS) || 'null') || [
+  {name:'Matec',       color:'#02d1ce', text:'#0a0a0a'},  // azul piscina
+  {name:'Costrucione', color:'#000000', text:'#ffffff'},  // preto
+  {name:'Vertticom',   color:'#d67a59', text:'#ffffff'},  // terracota
+  {name:'LRocha',      color:'#7b1e2b', text:'#ffffff'}   // vermelho vinho
 ];
+let collabs = JSON.parse(localStorage.getItem(LS_COLLABS) || 'null') || ['Camila','Alinne'];
+function saveAll(){ localStorage.setItem(LS_TASKS, JSON.stringify(tasks)); localStorage.setItem(LS_CLIENTS, JSON.stringify(clients)); localStorage.setItem(LS_COLLABS, JSON.stringify(collabs)); }
 
-/* ==== Utils ==== */
+/* ====== Helpers ====== */
 const $ = (s)=>document.querySelector(s);
 const uid = ()=> (crypto.randomUUID? crypto.randomUUID(): (Date.now()+Math.random()).toString(16));
-function saveAll(){ localStorage.setItem(STORE_TASKS, JSON.stringify(tasks)); localStorage.setItem(STORE_CLIENTS, JSON.stringify(clients)); }
-function fmt(d){ if(!d) return ''; const p=d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
-function clientTag(n){ const c=clients.find(x=>x.name===n)||{color:'#ddd',text:'#111'}; return `<span class="tag" style="background:${c.color};color:${c.text}">${n}</span>`; }
-
-/* ==== Login simples ==== */
-function showApp(){ $('#login').classList.add('hidden'); $('#appHeader').classList.remove('hidden'); $('#app').classList.remove('hidden'); }
-function showLogin(){ $('#login').classList.remove('hidden'); $('#appHeader').classList.add('hidden'); $('#app').classList.add('hidden'); }
-$('#btnLogin').onclick = ()=>{ const v=$('#pass').value.trim(); if(v===PANEL_PASS){ sessionStorage.setItem('dipe_ok','1'); $('#loginMsg').textContent=''; start(); } else { $('#loginMsg').textContent='Senha incorreta'; } };
-$('#pass').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#btnLogin').click(); });
-
-/* ==== Inicialização ==== */
-function initClientsUI(){
-  // popular selects
-  $('#t_client').innerHTML = clients.map(c=>`<option>${c.name}</option>`).join('');
-  $('#f_client').innerHTML = '<option value="">Todos</option>' + clients.map(c=>`<option>${c.name}</option>`).join('');
+function fmtDate(d){ if(!d) return ''; const p=d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
+function contrast(hex){ try{ const c=hex.replace('#',''); const r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16); const yiq=((r*299)+(g*587)+(b*114))/1000; return yiq>=128?'#0a0a0a':'#ffffff'; }catch(e){ return '#111'; } }
+function clientTag(name){ const c=clients.find(x=>x.name===name)||{color:'#ddd',text:'#111'}; return `<span class="tag" style="background:${c.color};color:${c.text}">${name}</span>`; }
+function sameWeek(d1, d2){ // compara segunda-domingo baseado em d2
+  if(!d1||!d2) return false;
+  const a=new Date(d1), b=new Date(d2);
+  const day=(x)=>{ const d=new Date(x); d.setHours(0,0,0,0); const wd=(d.getDay()+6)%7; d.setDate(d.getDate()-wd); return d; }; // segunda
+  const startA=day(a), startB=day(b);
+  return startA.getTime()===startB.getTime();
 }
-function loadTasks(){ try{ tasks = JSON.parse(localStorage.getItem(STORE_TASKS)||'[]'); }catch(e){ tasks=[]; } }
+
+/* ====== UI Init ====== */
+function buildFilters(){
+  $('#filterClient').innerHTML = '<option value="">Todos</option>'+clients.map(c=>`<option>${c.name}</option>`).join('');
+  $('#filterCollab').innerHTML = '<option value="">Todos</option>'+Array.from(new Set(collabs)).map(c=>`<option>${c}</option>`).join('');
+  $('#dlCollabs').innerHTML = Array.from(new Set(collabs)).map(c=>`<option value="${c}"></option>`).join('');
+}
+function filtered(){
+  const q=($('#q').value||'').toLowerCase().trim();
+  const fc=$('#filterClient').value, fco=$('#filterCollab').value, fs=$('#filterStatus').value;
+  const mode=$('#viewMode').value, d=$('#dateDaily').value;
+  return tasks.filter(t=>{
+    const mQ=!q || (t.title+t.desc).toLowerCase().includes(q);
+    const mC=!fc || t.client===fc;
+    const mCo=!fco || (t.collabs||[]).includes(fco);
+    const mS=!fs || t.status===fs;
+    let mTime=true;
+    if(mode==='diario' && d){ mTime = (t.date||'')===d; }
+    if(mode==='semanal' && d){ mTime = sameWeek(t.date, d); }
+    return mQ&&mC&&mCo&&mS&&mTime;
+  });
+}
 function render(){
-  const q = ($('#f_q').value||'').toLowerCase().trim();
-  const fc = $('#f_client').value; const fs=$('#f_status').value;
-  const rows = tasks.filter(t=>{
-    const okQ = !q || (t.title+t.desc).toLowerCase().includes(q);
-    const okC = !fc || t.client===fc;
-    const okS = !fs || t.status===fs;
-    return okQ && okC && okS;
-  }).sort((a,b)=> (b.updated||'').localeCompare(a.updated||''));
-  const tb = $('#tbl tbody'); tb.innerHTML='';
-  for(const t of rows){
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><strong>${t.title}</strong><div style="opacity:.7;font-size:12px">${t.desc||''}</div></td>
-      <td>${clientTag(t.client)}</td>
-      <td>${(t.collabs||[]).join(', ')}</td>
-      <td>
-        <select data-id="${t.id}" class="status">
+  const arr=filtered().slice().sort((a,b)=>(a.status>b.status?1:-1));
+  // board
+  const todo=$('[data-status="A Fazer"] .list'), doing=$('[data-status="Em Progresso"] .list'), done=$('[data-status="Concluído"] .list');
+  todo.innerHTML=doing.innerHTML=done.innerHTML='';
+  for(const t of arr){
+    if(t.status==='Backlog') continue;
+    const el=document.createElement('div'); el.className='card';
+    el.innerHTML = `
+      <div class="row"><strong style="flex:1">${t.title}</strong>${clientTag(t.client)}</div>
+      <div style="font-size:12px;opacity:.85;margin-top:6px">${(t.collabs||[]).join(', ')}</div>
+      ${t.date?`<div style="font-size:12px;opacity:.7;margin-top:4px">${fmtDate(t.date)}</div>`:''}
+      <div class="row" style="justify-content:flex-end;margin-top:8px;gap:8px">
+        <select data-act="status">
           <option ${t.status==='A Fazer'?'selected':''}>A Fazer</option>
           <option ${t.status==='Em Progresso'?'selected':''}>Em Progresso</option>
           <option ${t.status==='Concluído'?'selected':''}>Concluído</option>
           <option ${t.status==='Backlog'?'selected':''}>Backlog</option>
         </select>
-      </td>
-      <td>${fmt(t.date||'')}</td>
-      <td>
-        <button class="btn ghost" data-edit="${t.id}">Editar</button>
-        <button class="btn ghost" data-del="${t.id}">Excluir</button>
-      </td>`;
+        <button class="btn ghost" data-act="edit">Editar</button>
+      </div>`;
+    el.querySelector('[data-act="edit"]').onclick=()=> openTask(t);
+    el.querySelector('[data-act="status"]').onchange=(e)=>{ t.status=e.target.value; t.updated=new Date().toISOString(); saveAll(); render(); };
+    if(t.status==='A Fazer') todo.appendChild(el); else if(t.status==='Em Progresso') doing.appendChild(el); else done.appendChild(el);
+  }
+  // tabela entregas
+  const tb=$('#tbl tbody'); tb.innerHTML='';
+  for(const t of filtered().slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''))){
+    const tr=document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${t.title}</strong><div style="opacity:.7;font-size:12px">${t.desc||''}</div></td>
+      <td>${clientTag(t.client)}</td>
+      <td>${(t.collabs||[]).join(', ')}</td>
+      <td>${t.status}</td>
+      <td>${fmtDate(t.date||'')}</td>
+      <td>${new Date(t.updated||Date.now()).toLocaleString('pt-BR')}</td>
+      <td><button class="btn ghost" data-edit="${t.id}">Editar</button></td>`;
     tb.appendChild(tr);
+    tr.querySelector('[data-edit]').onclick=()=> openTask(tasks.find(x=>x.id===t.id));
   }
-  // binds status/edit/del
-  document.querySelectorAll('select.status').forEach(s=>{
-    s.onchange = (e)=>{
-      const id=e.target.dataset.id; const t=tasks.find(x=>x.id===id); if(!t) return;
-      t.status=e.target.value; t.updated=new Date().toISOString(); saveAll(); render();
+}
+
+/* ====== Modais ====== */
+function openTask(t){
+  const tpl=$('#tplTaskModal').content.cloneNode(true); const panel=tpl.querySelector('.panel');
+  const wrap=document.createElement('section'); wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel); document.body.appendChild(wrap);
+  panel.querySelector('#taskTitle').textContent=t?'Editar tarefa':'Nova tarefa';
+  const sel=panel.querySelector('#t_client'); sel.innerHTML=clients.map(c=>`<option ${t&&t.client===c.name?'selected':''}>${c.name}</option>`).join('');
+  panel.querySelector('#t_title').value=t?.title||'';
+  panel.querySelector('#t_status').value=t?.status||'A Fazer';
+  panel.querySelector('#t_date').value=t?.date||'';
+  panel.querySelector('#t_collabs').value=(t?.collabs||[]).join(', ');
+  panel.querySelector('#t_desc').value=t?.desc||'';
+  panel.querySelector('#btnDel').style.display=t?'inline-flex':'none';
+  wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
+  panel.querySelector('#btnSave').onclick=()=>{
+    const payload={
+      id: t?.id || uid(),
+      title: panel.querySelector('#t_title').value.trim()||'Sem título',
+      client: panel.querySelector('#t_client').value,
+      status: panel.querySelector('#t_status').value,
+      date: panel.querySelector('#t_date').value||null,
+      collabs: panel.querySelector('#t_collabs').value.split(',').map(s=>s.trim()).filter(Boolean),
+      desc: panel.querySelector('#t_desc').value.trim(),
+      updated: new Date().toISOString()
     };
-  });
-  document.querySelectorAll('[data-edit]').forEach(b=>{
-    b.onclick = ()=>{ const t=tasks.find(x=>x.id===b.dataset.edit); fillForm(t); };
-  });
-  document.querySelectorAll('[data-del]').forEach(b=>{
-    b.onclick = ()=>{ if(confirm('Excluir esta tarefa?')){ tasks = tasks.filter(x=>x.id!==b.dataset.del); saveAll(); render(); } };
-  });
-}
-function fillForm(t){
-  $('#formTitle').textContent = t? 'Editar tarefa':'Nova tarefa';
-  $('#t_id').value = t?.id || '';
-  $('#t_title').value = t?.title || '';
-  $('#t_client').value = t?.client || (clients[0]?.name || '');
-  $('#t_status').value = t?.status || 'A Fazer';
-  $('#t_date').value = t?.date || '';
-  $('#t_collabs').value = (t?.collabs||[]).join(', ');
-  $('#t_desc').value = t?.desc || '';
-}
-function clearForm(){ fillForm(null); }
-
-/* ==== Ações ==== */
-$('#btnSave').onclick = ()=>{
-  const id = $('#t_id').value || uid();
-  const data = {
-    id,
-    title: $('#t_title').value.trim() || 'Sem título',
-    client: $('#t_client').value,
-    status: $('#t_status').value,
-    date: $('#t_date').value || null,
-    collabs: $('#t_collabs').value.split(',').map(s=>s.trim()).filter(Boolean),
-    desc: $('#t_desc').value.trim(),
-    updated: new Date().toISOString()
+    const i=tasks.findIndex(x=>x.id===payload.id);
+    if(i>=0) tasks[i]=payload; else tasks.unshift(payload);
+    // atualiza sugestões de colaboradores
+    payload.collabs.forEach(c=>{ if(c && !collabs.includes(c)) collabs.push(c); });
+    saveAll(); buildFilters(); render(); wrap.remove();
   };
-  const i = tasks.findIndex(x=>x.id===id);
-  if(i>=0) tasks[i]=data; else tasks.unshift(data);
-  saveAll(); render(); clearForm();
-};
-$('#btnCancel').onclick = ()=> clearForm();
-$('#btnNew').onclick = ()=> { clearForm(); $('#t_title').focus(); };
-
-$('#btnExport').onclick = ()=>{
-  const blob = new Blob([JSON.stringify(tasks,null,2)], {type:'application/json'});
-  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tarefas.json'; a.click();
-};
-$('#fileImport').addEventListener('change', async (e)=>{
-  const f=e.target.files[0]; if(!f) return; const text=await f.text(); let data=[];
-  try{ data=JSON.parse(text);}catch(err){ alert('JSON inválido'); return; }
-  if(!Array.isArray(data)){ alert('Esperado um array'); return; }
-  if(!confirm('Importar '+data.length+' tarefas?')) return;
-  for(const x of data){
-    tasks.push({
-      id: x.id||uid(), title: x.title||'Sem título', client: x.client||clients[0]?.name||'Cliente',
-      status: x.status||'A Fazer', date: x.date||null, collabs: x.collabs||[], desc: x.desc||'',
-      updated: x.updated||new Date().toISOString()
-    });
-  }
-  saveAll(); render(); e.target.value='';
-});
-$('#btnClients').onclick = ()=>{
-  const modal = $('#clientsModal'); const list = $('#clientsList'); list.innerHTML='';
-  const row = (c)=> {
-    const div=document.createElement('div'); div.className='row';
-    div.innerHTML = `<input type="text" placeholder="Nome" value="${c?.name||''}" style="flex:1">
-                     <input type="color" value="${c?.color||'#888888'}" style="width:100px">
-                     <button class="btn ghost">🗑️</button>`;
-    div.querySelector('button').onclick = ()=> div.remove();
-    return div;
-  };
+  panel.querySelector('#btnDel').onclick=()=>{ if(t && confirm('Excluir esta tarefa?')){ tasks = tasks.filter(x=>x.id!==t.id); saveAll(); render(); wrap.remove(); } };
+}
+function openClients(){
+  const tpl=$('#tplClients').content.cloneNode(true); const panel=tpl.querySelector('.panel');
+  const wrap=document.createElement('section'); wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel); document.body.appendChild(wrap);
+  const list=panel.querySelector('#clientsList');
+  function row(c){ const r=document.createElement('div'); r.className='row'; r.innerHTML=`<input placeholder="Nome" value="${c?.name||''}" style="flex:1"><input type="color" value="${c?.color||'#888888'}" style="width:100px"><button class="btn ghost">🗑️</button>`; r.querySelector('button').onclick=()=> r.remove(); return r; }
   clients.forEach(c=> list.appendChild(row(c)));
-  $('#btnAddClient').onclick = ()=> list.appendChild(row({name:'',color:'#888888'}));
-  $('#btnSaveClients').onclick = ()=>{
-    const next = Array.from(list.children).map(r=>{
-      const name = r.querySelector('input[type="text"]').value.trim();
-      const color = r.querySelector('input[type="color"]').value;
+  panel.querySelector('#btnAddClient').onclick=()=> list.appendChild(row({name:'',color:'#888888'}));
+  panel.querySelector('#btnSaveClients').onclick=()=>{
+    clients = Array.from(list.children).map(r=>{
+      const name=r.querySelector('input[type="text"]').value.trim();
+      const color=r.querySelector('input[type="color"]').value;
       if(!name) return null;
-      // contraste automático
-      const c = color.replace('#',''); const R=parseInt(c.slice(0,2),16),G=parseInt(c.slice(2,4),16),B=parseInt(c.slice(4,6),16);
-      const yiq=((R*299)+(G*587)+(B*114))/1000; const text = yiq>=128?'#0a0a0a':'#ffffff';
+      const text=contrast(color);
       return {name,color,text};
     }).filter(Boolean);
-    if(next.length===0){ alert('Adicione pelo menos um cliente.'); return; }
-    clients = next; saveAll(); initClientsUI(); render(); modal.classList.add('hidden');
+    saveAll(); buildFilters(); render(); wrap.remove();
   };
-  modal.classList.remove('hidden');
-  modal.onclick = (e)=>{ if(e.target===modal) modal.classList.add('hidden'); };
-};
-$('#btnClear').onclick = ()=> { ['f_q','f_client','f_status'].forEach(id=>{ const el=document.getElementById(id); el.value=''; }); render(); };
-$('#btnLock').onclick = ()=> { sessionStorage.removeItem('dipe_ok'); location.reload(); };
-
-/* ==== Start ==== */
-function start(){
-  showApp();
-  initClientsUI();
-  loadTasks();
-  render();
+  wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
 }
-(function boot(){
-  if(sessionStorage.getItem('dipe_ok')) start(); else showLogin();
-})();
+function openCollabs(){
+  const tpl=$('#tplCollabs').content.cloneNode(true); const panel=tpl.querySelector('.panel');
+  const wrap=document.createElement('section'); wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel); document.body.appendChild(wrap);
+  const list=panel.querySelector('#collabsList');
+  function row(name){ const r=document.createElement('div'); r.className='row'; r.innerHTML=`<input placeholder="Nome do colaborador" value="${name||''}" style="flex:1"><button class="btn ghost">🗑️</button>`; r.querySelector('button').onclick=()=> r.remove(); return r; }
+  collabs.forEach(c=> list.appendChild(row(c)));
+  panel.querySelector('#btnAddCollab').onclick=()=> list.appendChild(row(''));
+  panel.querySelector('#btnSaveCollabs').onclick=()=>{
+    collabs = Array.from(list.querySelectorAll('input[type="text"]')).map(i=>i.value.trim()).filter(Boolean);
+    saveAll(); buildFilters(); render(); wrap.remove();
+  };
+  wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
+}
+
+/* ====== Actions ====== */
+$('#btnNew').onclick=()=> openTask(null);
+$('#btnClients').onclick=openClients;
+$('#btnCollabs').onclick=openCollabs;
+$('#btnPrint').onclick=()=> window.print();
+$('#btnExportCsv').onclick=()=>{
+  const arr=filtered();
+  const head=['id','title','client','collabs','status','date','desc','updated'];
+  const rows=[head.join(',')].concat(arr.map(t=>[
+    t.id,t.title,t.client,(t.collabs||[]).join('|'),t.status,t.date,t.desc,t.updated
+  ].map(x=>'"'+String(x??'').replaceAll('"','""')+'"').join(',')));
+  const blob=new Blob([rows.join('\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tarefas.csv'; a.click();
+};
+$('#btnExportJson').onclick=()=>{
+  const blob=new Blob([JSON.stringify(filtered(),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tarefas.json'; a.click();
+};
+$('#importJson').addEventListener('change', async (e)=>{
+  const file=e.target.files[0]; if(!file) return; const text=await file.text(); let data=[]; try{data=JSON.parse(text);}catch(err){alert('JSON inválido');return}
+  if(!Array.isArray(data)){ alert('Esperado um array de tarefas'); return; }
+  if(!confirm('Importar '+data.length+' tarefas?')) return;
+  for(const x of data){
+    tasks.push({ id: x.id||uid(), title:x.title||'Sem título', client:x.client||clients[0]?.name||'Cliente', status:x.status||'A Fazer', date:x.date||null, collabs:x.collabs||[], desc:x.desc||'', updated:x.updated||new Date().toISOString() });
+  }
+  saveAll(); render(); e.target.value='';
+};
+);
+['q','filterClient','filterCollab','filterStatus','viewMode','dateDaily'].forEach(id=> document.getElementById(id).addEventListener('input', ()=>{
+  // mostrador da data conforme modo
+  const mode=$('#viewMode').value;
+  $('#dateWrap').style.display = (mode==='diario'||mode==='semanal')? 'block':'none';
+  render();
+}));
+$('#btnClear').onclick=()=>{ ['q','filterClient','filterCollab','filterStatus','dateDaily'].forEach(id=>{const el=document.getElementById(id); if(!el) return; el.value='';}); $('#viewMode').value='geral'; $('#dateWrap').style.display='none'; render(); };
+
+/* ====== Start ====== */
+buildFilters(); render();
 </script>
 </body>
 </html>
