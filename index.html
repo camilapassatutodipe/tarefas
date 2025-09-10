@@ -59,17 +59,17 @@
         <div class="badge">D</div>
         <div>
           <h1>Agência Dipe</h1>
-          <small>Acesso ao painel do time</small>
+          <small>Digite a senha para acessar</small>
         </div>
       </div>
       <div style="height:8px"></div>
-      <label for="email">E-mail corporativo</label>
-      <input id="email" type="email" placeholder="seu.nome@digitalparaempresas.com.br" />
+      <label for="pass">Senha</label>
+      <input id="pass" type="password" placeholder="••••••••" />
       <div style="height:8px"></div>
-      <button id="btnMagic" class="btn" style="width:100%">Enviar link de acesso</button>
+      <button id="btnEnter" type="button" class="btn" style="width:100%">Entrar</button>
       <div class="msg" id="loginMsg"></div>
       <div style="height:8px"></div>
-      <small>Somente contas <b>@digitalparaempresas.com.br</b> têm acesso. Após clicar no link recebido por e-mail, você já estará dentro.</small>
+      <small>Se precisar trocar a senha, fale com a administração.</small>
     </div>
   </section>
 
@@ -92,8 +92,7 @@
       </label>
       <button class="btn ghost" id="btnClients">Clientes</button>
       <button class="btn ghost" id="btnCollabs">Colaboradores</button>
-      <button class="btn" id="btnPrint">Imprimir</button>
-      <button class="btn" id="btnLogout" title="Encerrar sessão">Sair (time)</button>
+      <button class="btn" id="btnPrint">Imprimir</button> <button class="btn ghost" id="btnLock" title="Bloquear">Bloquear</button>
     </div>
   </header>
 
@@ -213,15 +212,9 @@
   <script>
   // ====== CONFIG ======
   const TEAM = 'dipe';
-  const DOMAIN = '@digitalparaempresas.com.br';
-  const SUPABASE_URL = 'https://agvlectfxflbdccklesk.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFndmxlY3RmeGZsYmRjY2tsZXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczODA5MzUsImV4cCI6MjA3Mjk1NjkzNX0.lN-cwvX7t3BRLQdQ3ylmb__Ux7y9Zaa1dBp6x7vSKyI';
-  const SITE_URL = 'https://tarefas.digitalparaempresas.com.br/';
-
-  // ====== STATE ======
-  let sb = (SUPABASE_URL && SUPABASE_ANON_KEY) ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
-  let tasks = [];
-  let rtChannel = null;
+const PANEL_PASS = 'dipe2025!';
+const STORAGE_TASKS = 'dipe_tasks_v1';
+let tasks = [];
   let clients = JSON.parse(localStorage.getItem('dipe_clients')||'null') || [
     {name:'Matec', color:'#02d1ce', text:'#0a0a0a'},
     {name:'Construcione', color:'#000000', text:'#ffffff'},
@@ -240,7 +233,9 @@
   function fmtDate(d){if(!d) return ''; const p=d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`}
 
   // ====== AUTH ======
-  async function checkAuth(){
+  function showLogin(){ document.getElementById('login').classList.remove('hidden'); document.getElementById('appHeader').classList.add('hidden'); document.getElementById('app').classList.add('hidden'); }
+function showApp(){ document.getElementById('login').classList.add('hidden'); document.getElementById('appHeader').classList.remove('hidden'); document.getElementById('app').classList.remove('hidden'); load(); }
+{
     if(!sb){ $('#loginMsg').style.color='#b91c1c'; $('#loginMsg').textContent='Configure o Supabase (URL e Anon Key) no index.html.'; return; }
     const { data:{ session } } = await sb.auth.getSession();
     if(session){ showApp(); } else { showLogin(); }
@@ -255,17 +250,16 @@
     setupRealtime();
   }
 
-  // ====== DATA (Supabase) ======
-  async function load(){
-    if(!sb) return; const { data, error } = await sb.from('tasks').select('*').eq('team', TEAM).order('updated', {ascending:false});
-    if(error){ console.error(error); return; }
-    tasks = data||[]; render(); buildFilters(); }
-  async function dbInsert(t){const {data,error}=await sb.from('tasks').insert(t).select().single(); if(error){alert('Erro ao salvar: '+error.message);return null;} return data;}
-  async function dbUpdate(t){const {data,error}=await sb.from('tasks').update(t).eq('id',t.id).select().single(); if(error){alert('Erro ao atualizar: '+error.message);return null;} return data;}
-  async function dbDelete(id){const {error}=await sb.from('tasks').delete().eq('id',id); if(error) alert('Erro ao excluir: '+error.message);}
+  // ====== DATA (Local) ======
+function persist(){ localStorage.setItem(STORAGE_TASKS, JSON.stringify(tasks)); }
+function load(){ tasks = JSON.parse(localStorage.getItem(STORAGE_TASKS)||'[]'); render(); buildFilters(); }
+async function dbInsert(t){ t.id = (crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2)); tasks.unshift(t); persist(); return t; }
+async function dbUpdate(t){ const i = tasks.findIndex(x=>x.id===t.id); if(i>=0) tasks[i]=t; persist(); return t; }
+async function dbDelete(id){ tasks = tasks.filter(x=>x.id!==id); persist(); }
+ if(error) alert('Erro ao excluir: '+error.message);}
 
   // ====== DATA: Realtime setup ======
-  function setupRealtime(){
+  {
     if(!sb) return; if(rtChannel){ sb.removeChannel(rtChannel); rtChannel=null; }
     rtChannel = sb.channel('public:tasks').on('postgres_changes', { event:'*', schema:'public', table:'tasks' }, (payload)=>{
       const row = payload.new || payload.old; if(!row || row.team!==TEAM) return;
@@ -363,7 +357,7 @@
     }
     render(); e.target.value='';
   });
-  $('#btnLogout').onclick=async ()=>{ if(sb) await sb.auth.signOut(); location.reload(); };
+   location.reload(); };
 
   // ====== TASK MODAL ======
   function openTask(t){
@@ -433,22 +427,37 @@
   $('#btnCollabs').onclick=openCollabs;
 
   // ====== LOGIN actions ======
-  $('#btnMagic').onclick = async ()=>{
-    const msg = document.getElementById('loginMsg');
-    if(!sb){ msg.style.color='#b91c1c'; msg.textContent='Configure SUPABASE_URL e SUPABASE_ANON_KEY no index.html.'; return; }
-    const email=$('#email').value.trim(); if(!email){ msg.style.color='#b91c1c'; msg.textContent='Digite seu e-mail'; return; }
-    if(!email.endsWith(DOMAIN)){ msg.style.color='#b91c1c'; msg.textContent='Use um e-mail '+DOMAIN; return; }
-    const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: SITE_URL } });
-    msg.style.color = error? '#b91c1c':'#065f46';
-    msg.textContent = error? ('Erro: '+error.message) : ('Enviamos um link de acesso para '+email+'. Verifique sua caixa de entrada/spam.');
-  };
+  // ====== SENHA ======
+function applyPasswordHandlers(){
+  const btn=document.getElementById('btnEnter'); const inp=document.getElementById('pass'); const msg=document.getElementById('loginMsg');
+  if(btn){ btn.onclick=()=>{ const v=(inp.value||'').trim(); if(v===PANEL_PASS){ sessionStorage.setItem('dipe_ok','1'); showApp(); } else { msg.style.color='#b91c1c'; msg.textContent='Senha incorreta'; } }; }
+  if(inp){ inp.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ btn.click(); }}); }
+  document.getElementById('btnLock')?.addEventListener('click', ()=>{ sessionStorage.removeItem('dipe_ok'); location.reload(); });
+}
+applyPasswordHandlers();
+const msg = document.getElementById('loginMsg');
+      if(!sb){ msg.style.color='#b91c1c'; msg.textContent='Configure SUPABASE_URL e SUPABASE_ANON_KEY no index.html.'; return; }
+      const email=document.getElementById('email').value.trim();
+      if(!email){ msg.style.color='#b91c1c'; msg.textContent='Digite seu e-mail'; return; }
+      if(!email.endsWith(DOMAIN)){ msg.style.color='#b91c1c'; msg.textContent='Use um e-mail '+DOMAIN; return; }
+      const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: SITE_URL } });
+      msg.style.color = error? '#b91c1c':'#065f46';
+      msg.textContent = error? ('Erro: '+error.message) : ('Enviamos um link de acesso para '+email+'. Confira a caixa de entrada/spam.');
+    }catch(err){
+      const msg = document.getElementById('loginMsg');
+      msg.style.color='#b91c1c'; msg.textContent='Erro inesperado: '+(err?.message||err);
+    }
+  }
+  document.getElementById('btnMagic')?.addEventListener('click', sendMagic);
+  document.getElementById('email')?.addEventListener('keydown', (e)=>{ if(e.key==='Enter') sendMagic(e); });
   $('#btnLogout').onclick = async ()=>{
     if(sb){ if(rtChannel){ sb.removeChannel(rtChannel); rtChannel=null; } await sb.auth.signOut(); }
     location.reload();
   };
 
   // start
-  checkAuth(); buildFilters(); render();
+  if(sessionStorage.getItem('dipe_ok')){ showApp(); } else { showLogin(); }
+buildFilters(); render();
   </script>
 </body>
 </html>
