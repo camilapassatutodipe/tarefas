@@ -21,9 +21,12 @@
     .brand{display:flex;align-items:center;gap:10px;padding:10px 0}
     .badge{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#ff7b6e;color:#fff;font-weight:800}
     .grow{flex:1}
-    .btn{appearance:none;border:1px solid #ddd;background:#fff;color:#111;border-radius:12px;padding:8px 12px;font-weight:600;cursor:pointer}
-    .btn.secondary{background:#111;color:#fff;border-color:rgba(255,255,255,.2)}
-    .btn.ghost{background:transparent;border-color:#ddd}
+    .btn{appearance:none;border:1px solid #bdbdbd;background:#ffffff;color:#111;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.04)}
+    .btn:hover{filter:brightness(0.98)}
+    .btn.secondary{background:#111;color:#fff;border-color:#111}
+    .btn.secondary:hover{filter:brightness(1.1)}
+    .btn.ghost{background:#fff;color:#111;border-color:#bdbdbd}
+    .btn.ghost:hover{background:#f4f4f4}
     .btn[disabled]{opacity:.6;cursor:not-allowed}
     .filters{display:grid;grid-template-columns:1fr 160px 160px 160px 160px auto;gap:10px;align-items:end;margin:16px 0}
     .filters label{font-size:12px;opacity:.75;margin-left:6px}
@@ -215,6 +218,19 @@
 const PANEL_PASS = 'dipe2025!';
 const STORAGE_TASKS = 'dipe_tasks_v1';
 let tasks = [];
+// clientes e colaboradores (persistem localmente)
+let clients = JSON.parse(localStorage.getItem('dipe_clients')||'null') || [
+  {name:'Matec', color:'#02d1ce', text:'#0a0a0a'},
+  {name:'Construcione', color:'#000000', text:'#ffffff'},
+  {name:'Vertticom', color:'#d67a59', text:'#ffffff'},
+  {name:'LRocha', color:'#7b1e2b', text:'#ffffff'}
+];
+let collabs = JSON.parse(localStorage.getItem('dipe_collabs')||'null') || ['Camila','Alinne'];
+function contrast(hex){ try{ const c=hex.replace('#',''); const r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16); const yiq=((r*299)+(g*587)+(b*114))/1000; return yiq>=128?'#0a0a0a':'#ffffff'; }catch(e){ return '#111'; } }
+function clientTag(name){
+  const c = clients.find(x=>x.name===name) || {color:'#ddd', text:'#111'};
+  return `<span class="tag" style="background:${c.color};color:${c.text}">${name}</span>`;
+}
   let clients = JSON.parse(localStorage.getItem('dipe_clients')||'null') || [
     {name:'Matec', color:'#02d1ce', text:'#0a0a0a'},
     {name:'Construcione', color:'#000000', text:'#ffffff'},
@@ -283,7 +299,10 @@ async function dbDelete(id){ tasks = tasks.filter(x=>x.id!==id); persist(); }
 
   // ====== RENDER ======
   function buildFilters(){
-    $('#fClient').innerHTML = '<option value="">Todos</option>'+clients.map(c=>`<option>${c.name}</option>`).join('');
+    const fC=document.getElementById('fClient'); if(fC) fC.innerHTML = '<option value="">Todos</option>'+clients.map(c=>`<option>${c.name}</option>`).join('');
+    const fCo=document.getElementById('fCollab'); if(fCo) fCo.innerHTML = '<option value="">Todos</option>'+Array.from(new Set(collabs)).map(c=>`<option>${c}</option>`).join('');
+    const dl=document.getElementById('dlCollabs'); if(dl) dl.innerHTML = Array.from(new Set(collabs)).map(c=>`<option value="${c}"></option>`).join('');
+  }</option>`).join('');
     $('#fCollab').innerHTML = '<option value="">Todos</option>'+Array.from(new Set(collabs)).map(c=>`<option>${c}</option>`).join('');
     $('#dlCollabs').innerHTML = Array.from(new Set(collabs)).map(c=>`<option value="${c}"></option>`).join('');
   }
@@ -501,6 +520,30 @@ render();
     function go(e){ if(e) e.preventDefault(); const v=(pass&&pass.value||'').trim(); if(v===PASS){ sessionStorage.setItem('dipe_ok','1'); if(msg) msg.textContent=''; showApp(); } else { if(msg){ msg.style.color='#b91c1c'; msg.textContent='Senha incorreta'; } } }
     if(btn){ btn.disabled=false; btn.addEventListener('click', go); }
     if(pass){ pass.addEventListener('keydown', (e)=>{ if(e.key==='Enter') go(e); }); }
+  })();
+    // Reforce binds principais caso algo tenha sido removido
+  (function ensureBinds(){
+    const bNew=document.getElementById('btnNew'); if(bNew && !bNew.__bound){ bNew.__bound=true; bNew.addEventListener('click', ()=> openTask(null)); }
+    const bCli=document.getElementById('btnClients'); if(bCli && !bCli.__bound){ bCli.__bound=true; bCli.addEventListener('click', ()=>{
+      const tpl=document.getElementById('tplClients').content.cloneNode(true); const panel=tpl.querySelector('.panel');
+      const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel); document.body.appendChild(wrap);
+      const list=panel.querySelector('#clientsList');
+      function row(c){ const r=document.createElement('div'); r.className='row'; r.style.gap='8px'; r.innerHTML=`<input placeholder="Nome" value="${c?.name||''}" style="flex:1"><input type="color" value="${c?.color||'#888888'}" style="width:100px"><button class="btn ghost">🗑️</button>`; r.querySelector('button').onclick=()=> r.remove(); return r; }
+      clients.forEach(c=> list.appendChild(row(c)));
+      panel.querySelector('#btnAddClient').onclick=()=> list.appendChild(row({name:'',color:'#888888'}));
+      panel.querySelector('#btnSaveClients').onclick=()=>{ clients = Array.from(list.querySelectorAll('.row')).map(r=>{ const name=r.querySelector('input[type="text"]').value.trim(); const color=r.querySelector('input[type="color"]').value; if(!name) return null; const text = contrast(color); return {name, color, text}; }).filter(Boolean); localStorage.setItem('dipe_clients', JSON.stringify(clients)); buildFilters(); render(); wrap.remove(); };
+      wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
+    }); }
+    const bCol=document.getElementById('btnCollabs'); if(bCol && !bCol.__bound){ bCol.__bound=true; bCol.addEventListener('click', ()=>{
+      const tpl=document.getElementById('tplCollabs').content.cloneNode(true); const panel=tpl.querySelector('.panel');
+      const wrap=document.createElement('section'); wrap.id='modal'; wrap.style='position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50'; wrap.appendChild(panel); document.body.appendChild(wrap);
+      const list=panel.querySelector('#collabsList');
+      function row(name){ const r=document.createElement('div'); r.className='row'; r.style.gap='8px'; r.innerHTML=`<input placeholder="Nome do colaborador" value="${name||''}" style="flex:1"><button class="btn ghost">🗑️</button>`; r.querySelector('button').onclick=()=> r.remove(); return r; }
+      collabs.forEach(c=> list.appendChild(row(c)));
+      panel.querySelector('#btnAddCollab').onclick=()=> list.appendChild(row(''));
+      panel.querySelector('#btnSaveCollabs').onclick=()=>{ collabs = Array.from(list.querySelectorAll('input')).map(i=>i.value.trim()).filter(Boolean); localStorage.setItem('dipe_collabs', JSON.stringify(collabs)); buildFilters(); render(); wrap.remove(); };
+      wrap.addEventListener('click', (e)=>{ if(e.target===wrap) wrap.remove(); });
+    }); }
   })();
   </script>
 </body>
