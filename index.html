@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Tarefas Dipe — Semana (Auth + RLS, Supabase)</title>
+<title>Tarefas Dipe — Semana (Auth + Convites, Supabase)</title>
 <style>
   :root{
     --baseFont: 16.5px;
     --bg:#f7f8fc; --card:#ffffff; --muted:#475569; --text:#0f172a;
     --accent:#4f46e5; --ok:#15803d; --warn:#b91c1c; --soon:#b45309;
     --work:#1d4ed8; --idle:#6b7280; --border:#cbd5e1; --chip-bg:#f3f4f6;
-    --overlay: rgba(0,0,0,.25);
+    --overlay: rgba(2,6,23,.65);
     --brand-construcione:#374151; --brand-matec:#02b8b5; --brand-vertticom:#b4533a; --brand-lrocha:#c62828;
   }
   [data-theme="dark"]{
     --bg:#0f1221; --card:#171b2e; --muted:#a1a7b8; --text:#e9ecf5;
     --accent:#7c9cff; --ok:#3ddc97; --warn:#ff6b6b; --soon:#f5c84b;
-    --work:#5ab0ff; --idle:#8892a6; --border:#222842; --chip-bg:#111527; --overlay: rgba(0,0,0,.5);
+    --work:#5ab0ff; --idle:#8892a6; --border:#222842; --chip-bg:#111527; --overlay: rgba(0,0,0,.7);
     --brand-construcione:#3a3f4b; --brand-matec:#02d1ce; --brand-vertticom:#c65d3a; --brand-lrocha:#e53935;
   }
   [data-contrast="high"]{ --muted:#334155; --border:#94a3b8; --chip-bg:#e5e7eb; }
@@ -24,6 +24,9 @@
   html,body{height:100%}
   body{ margin:0; font: var(--baseFont)/1.6 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:
       radial-gradient(1200px 800px at 10% -10%, rgba(79,70,229,.06) 0%, transparent 60%), var(--bg); color:var(--text); }
+  body.auth-screen{ overflow:hidden; }
+  body.auth-screen header, body.auth-screen main{ display:none !important; }
+
   .container{max-width:1250px; margin:28px auto; padding:0 16px}
   header{position:sticky; top:0; z-index:10; backdrop-filter: blur(8px);
     background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.65)); border-bottom:1px solid var(--border)}
@@ -107,27 +110,47 @@
   .summary h3{margin:0 0 6px 0; font-size:14px; color:#1f2937; letter-spacing:.2px}
   [data-theme="dark"] .summary h3{color:#cfd4ff}
   .summary ul{margin:0; padding-left:18px}
+
+  /* ===== Login como tela dedicada ===== */
+  #authGate{ position:fixed; inset:0; display:none; place-items:center; z-index:1000; }
+  #authGate[open]{ display:grid; }
+  #authGate::before{ content:""; position:absolute; inset:0; background:
+    radial-gradient(900px 600px at 10% -10%, rgba(79,70,229,.18), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.85));
+    filter: none; }
+  [data-theme="dark"] #authGate::before{ background:
+    radial-gradient(900px 600px at 10% -10%, rgba(124,156,255,.25), transparent 60%),
+    linear-gradient(180deg, rgba(15,18,33,.92), rgba(15,18,33,.85)); }
+  .auth-card{ position:relative; width:min(520px, 92vw); background:#fff; border:1px solid var(--border); border-radius:20px; padding:24px; box-shadow:0 30px 120px rgba(0,0,0,.25) }
+  [data-theme="dark"] .auth-card{ background:#0e1228; }
+  .auth-brand{ display:flex; align-items:center; gap:10px; margin-bottom:4px }
+  .auth-logo{ width:36px; height:36px; border-radius:10px; display:grid; place-items:center; font-weight:900; background:#111827; color:#fff; letter-spacing:.5px }
+  [data-theme="dark"] .auth-logo{ background:#1f2937 }
+  .auth-card h2{ margin:6px 0 2px 0; font-size:22px; letter-spacing:.2px }
+  .muted{ color:var(--muted); font-size:13.5px }
+  .auth-grid{ display:grid; gap:12px; margin-top:12px }
+  .field{ display:grid; gap:6px }
+  .field label{ font-size:13px; color:var(--muted) }
+  .field input{ padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; color:var(--text); outline:none }
+  [data-theme="dark"] .field input{ background:#0b0f22 }
+  .auth-actions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px }
+  .auth-footer{ display:flex; justify-content:space-between; align-items:center; margin-top:10px }
+  .auth-footer .hint{ font-size:12.5px; color:var(--muted) }
+
+  /* ===== Modais padrão ===== */
   .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:var(--overlay); z-index:50}
   .modal[open]{display:flex}
   .dialog{width:min(720px,92vw); background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:0 20px 80px rgba(0,0,0,.2)}
-  [data-theme="dark"] .dialog{background:#0e1228; box-shadow:0 20px 80px rgba(0,0,0,.5)}
+  [data-theme="dark"] .dialog{ background:#0e1228; box-shadow:0 20px 80px rgba(0,0,0,.5) }
   .dialog header{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border)}
   .dialog .content{padding:16px; display:grid; gap:12px}
-  .field{display:grid; gap:6px}
-  .field label{font-size:13px; color:var(--muted)}
-  .field input, .field select, .field textarea{padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; color:var(--text); outline:none}
-  [data-theme="dark"] .field input, [data-theme="dark"] .field select, [data-theme="dark"] .field textarea{background:#0b0f22}
   .dialog footer{display:flex; justify-content:space-between; gap:10px; padding:14px 16px; border-top:1px solid var(--border)}
   .note-preview{white-space:pre-wrap; color:#1e3a8a; background:#f1f5f9; border:1px dashed #cbd5e1; border-radius:10px; padding:10px 12px; font-size:13.5px}
   [data-theme="dark"] .note-preview{color:#cbd3ff; background:#0b0f22; border-color:#2a3153}
   .danger{color:#b91c1c}
-  .auth-card{width:min(560px,95vw); background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 20px 80px rgba(0,0,0,.2)}
-  [data-theme="dark"] .auth-card{background:#0e1228}
-  .auth-card h2{margin:0 0 4px 0; font-size:18px}
-  .muted{color:var(--muted); font-size:13px}
-  .account{font-size:13px; color:var(--muted)}
+
   @media print{
-    header, .toolbar, .row-actions, .iconbtn, .status select, #addTaskBtn, #exportCsv, #duplicateWeek, #prevWeek, #nextWeek, #weekPicker, #toggleTheme, #fontDown, #fontUp, #toggleContrast, #syncBtn, #pullBtn, #syncBadge, #accountInfo, #logoutBtn { display:none !important; }
+    header, .toolbar, .row-actions, .iconbtn, .status select, #addTaskBtn, #exportCsv, #duplicateWeek, #prevWeek, #nextWeek, #weekPicker, #toggleTheme, #fontDown, #fontUp, #toggleContrast, #syncBtn, #pullBtn, #syncBadge, #accountInfo, #logoutBtn, #inviteBtn { display:none !important; }
     body{ background:#fff; color:#111; }
     .daycol{ box-shadow:none; border-color:#bbb; }
     .task{ background:#fff; border-color:#ddd; }
@@ -178,6 +201,7 @@
         <button class="btn" id="resetWeek">Resetar semana</button>
         <button class="btn" id="exportCsv">Exportar CSV</button>
         <button class="btn" id="duplicateWeek">Duplicar p/ próxima semana</button>
+        <button class="btn" id="inviteBtn" style="display:none">Convidar</button>
         <button class="btn" onclick="window.print()">Imprimir</button>
       </div>
     </div>
@@ -213,19 +237,49 @@
     </div>
   </div>
 
-  <!-- PORTA DE AUTENTICAÇÃO -->
-  <div class="modal" id="authGate">
+  <!-- MODAL CONVITE -->
+  <div class="modal" id="inviteModal">
+    <div class="dialog">
+      <header><strong>Convidar por e-mail</strong><button class="btn" id="closeInvite" aria-label="Fechar">✕</button></header>
+      <div class="content">
+        <div class="field"><label for="inviteEmail">E-mail do convidado</label>
+          <input id="inviteEmail" type="email" placeholder="pessoa@agencia.com" />
+        </div>
+        <div class="muted">Enviaremos um <strong>link mágico</strong> de acesso. Quem não tiver conta poderá criar ao abrir o link.</div>
+        <div id="inviteMsg" class="muted"></div>
+      </div>
+      <footer>
+        <div></div>
+        <div class="btn-row"><button class="btn primary" id="sendInvite">Enviar convite</button></div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- LOGIN (TELA DEDICADA) -->
+  <div id="authGate">
     <div class="auth-card">
+      <div class="auth-brand">
+        <div class="auth-logo">DI</div>
+        <div>
+          <div class="muted" style="font-weight:800; letter-spacing:.2px">Agência Dipe</div>
+          <div class="muted" style="font-size:12.5px">Plataforma de tarefas — acesso seguro</div>
+        </div>
+      </div>
       <h2 id="authTitle">Entrar</h2>
       <p class="muted" id="authHint">Use e-mail e senha para acessar suas semanas.</p>
-      <div class="field"><label for="authEmail">E-mail</label><input id="authEmail" type="email" placeholder="voce@dipe.com.br" /></div>
-      <div class="field"><label for="authPass">Senha</label><input id="authPass" type="password" placeholder="••••••••" /></div>
-      <div style="display:flex; gap:8px; margin-top:8px">
+      <div class="auth-grid">
+        <div class="field"><label for="authEmail">E-mail</label><input id="authEmail" type="email" placeholder="voce@dipe.com.br" /></div>
+        <div class="field"><label for="authPass">Senha</label><input id="authPass" type="password" placeholder="••••••••" /></div>
+      </div>
+      <div class="auth-actions">
         <button class="btn primary" id="doSignIn">Entrar</button>
         <button class="btn" id="doSignUp">Criar conta</button>
         <button class="btn" id="doReset">Resetar senha</button>
       </div>
-      <div class="muted" id="authMsg" style="margin-top:8px"></div>
+      <div class="auth-footer">
+        <div class="hint">Dica: você pode alternar tema/contraste depois de entrar.</div>
+        <div id="authMsg" class="muted"></div>
+      </div>
     </div>
   </div>
 
@@ -274,9 +328,9 @@
   const authGate = document.getElementById('authGate'); const authEmail = document.getElementById('authEmail'); const authPass = document.getElementById('authPass');
   const doSignIn = document.getElementById('doSignIn'); const doSignUp = document.getElementById('doSignUp'); const doReset = document.getElementById('doReset');
   const authMsg = document.getElementById('authMsg'); const authTitle = document.getElementById('authTitle'); const authHint = document.getElementById('authHint');
-  const accountInfo = document.getElementById('accountInfo'); const logoutBtn = document.getElementById('logoutBtn');
-  function showAuth(open){ if(open){ authGate.setAttribute('open',''); } else { authGate.removeAttribute('open'); } }
-  function setAccount(user){ if(user){ accountInfo.textContent = user.email; logoutBtn.style.display=''; } else { accountInfo.textContent='Não conectado'; logoutBtn.style.display='none'; } }
+  const accountInfo = document.getElementById('accountInfo'); const logoutBtn = document.getElementById('logoutBtn'); const inviteBtn = document.getElementById('inviteBtn');
+  function showAuth(open){ if(open){ authGate.setAttribute('open',''); document.body.classList.add('auth-screen'); } else { authGate.removeAttribute('open'); document.body.classList.remove('auth-screen'); } }
+  function setAccount(user){ if(user){ accountInfo.textContent = user.email; logoutBtn.style.display=''; inviteBtn.style.display=''; } else { accountInfo.textContent='Não conectado'; logoutBtn.style.display='none'; inviteBtn.style.display='none'; } }
   function setAuthMsg(t,isErr){ authMsg.textContent=t||''; authMsg.style.color = isErr? 'var(--warn)':'var(--text)'; }
 
   doSignIn.addEventListener('click', async()=>{
@@ -289,21 +343,36 @@
     setAuthMsg('Criando conta...');
     const { data, error } = await supa.auth.signUp({ email: authEmail.value.trim(), password: authPass.value });
     if(error){ setAuthMsg(error.message, true); return; }
-    setAuthMsg('Conta criada. Faça login.');
+    setAuthMsg('Conta criada. Você já pode entrar.');
   });
   doReset.addEventListener('click', async()=>{
     setAuthMsg('Enviando e-mail de reset...');
-    const { error } = await supa.auth.resetPasswordForEmail(authEmail.value.trim(), { redirectTo: window.location.href });
+    const { error } = await supa.auth.resetPasswordForEmail(authEmail.value.trim(), { redirectTo: window.location.origin + window.location.pathname });
     if(error){ setAuthMsg(error.message, true); return; }
     setAuthMsg('Se o e-mail existir, você receberá instruções.');
   });
   logoutBtn.addEventListener('click', async()=>{ await supa.auth.signOut(); setAccount(null); showAuth(true); });
 
+  // ============ CONVITES (MAGIC LINK) ============
+  const inviteModal = document.getElementById('inviteModal'); const inviteEmail = document.getElementById('inviteEmail'); const inviteMsg = document.getElementById('inviteMsg');
+  document.getElementById('closeInvite').addEventListener('click', ()=> inviteModal.removeAttribute('open'));
+  inviteBtn.addEventListener('click', ()=>{ inviteEmail.value=''; inviteMsg.textContent=''; inviteModal.setAttribute('open',''); });
+  document.getElementById('sendInvite').addEventListener('click', async()=>{
+    const email = inviteEmail.value.trim(); if(!email){ inviteMsg.textContent = 'Informe um e-mail válido.'; return; }
+    inviteMsg.textContent = 'Enviando convite...';
+    const { data, error } = await supa.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname, shouldCreateUser: true }
+    });
+    if(error){ inviteMsg.textContent = 'Erro: ' + error.message; return; }
+    inviteMsg.textContent = 'Convite enviado! Peça para a pessoa checar o e-mail.';
+  });
+
   // ============ CLOUD SYNC ============
   const syncBadge = document.getElementById('syncBadge'); const syncStateEl = document.getElementById('syncState');
   function setCloudState(state,hint){ syncStateEl.textContent = state; syncBadge.style.borderColor = state==='ok'?'var(--ok)':(state==='erro'?'var(--warn)':'var(--border)'); syncBadge.style.boxShadow = state==='ok'?'0 0 0 1px rgba(21,128,61,.25) inset':''; if(hint) syncBadge.title=hint; }
 
-  let OWNER_ID = null; // user.id
+  let OWNER_ID = null;
   async function requireUser(){ const { data } = await supa.auth.getSession(); const user = data.session?.user || null; if(!user){ showAuth(true); return null; } OWNER_ID = user.id; setAccount(user); return user; }
 
   async function supaUpsertWeek(){ if(!OWNER_ID){ await requireUser(); if(!OWNER_ID) return false; }
@@ -368,7 +437,9 @@
   function closeModal(){ modal.removeAttribute('open'); }
   function saveTask(){ const client=fClient.value.trim(); const title=fTitle.value.trim(); if(!client||!title){ alert('Preencha Cliente e Título.'); return; } const status=fStatus.value; const day=fDay.value; const notes=fNotes.value; if(editingId){ const t=state.find(x=>x.id===editingId); if(!t) return; t.client=client; t.title=title; t.status=status; t.day=day; t.notes=notes; } else { state.push({id:uid(), client, title, status, day, notes, order:nextOrderForDay(day)}); } persist(); closeModal(); render(); }
   function deleteTask(){ if(!editingId) return; if(confirm('Excluir esta tarefa?')){ state=state.filter(t=>t.id!==editingId); persist(); closeModal(); render(); } }
-  function exportCsv(){ const headers=["Data","Dia","Cliente","Título","Status","Notas"]; const rows=state.map(t=>{ const d=fromISO(t.day); const dow=d.toLocaleDateString('pt-BR',{weekday:'short'}); return [humanDate(t.day), dow, t.client, t.title, STATUS[t.status]?.label||t.status, (t.notes||'').replace(/\n/g,' ')]; }); const csv="\ufeff" + [headers, ...rows].map(r=> r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join("\n"); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`tarefas-${weekStart}.csv`; a.click(); URL.revokeObjectURL(url); }
+  function exportCsv(){ const headers=["Data","Dia","Cliente","Título","Status","Notas"]; const rows=state.map(t=>{ const d=fromISO(t.day); const dow=d.toLocaleDateString('pt-BR',{weekday:'short'}); return [humanDate(t.day), dow, t.client, t.title, STATUS[t.status]?.label||t.status, (t.notes||'').replace(/
+/g,' ')]; }); const csv="﻿" + [headers, ...rows].map(r=> r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join("
+"); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`tarefas-${weekStart}.csv`; a.click(); URL.revokeObjectURL(url); }
   function duplicateToNextWeek(){ const nextWeekStart=toISO(new Date(fromISO(weekStart).getTime()+7*24*3600*1000)); const nextMonday=toISO(mondayOf(fromISO(nextWeekStart))); const cloned=state.map(t=>({...t, id:uid(), status:'parado', day:toISO(new Date(fromISO(t.day).getTime()+7*24*3600*1000)) })); localStorage.setItem(storageKeyFor(nextMonday), JSON.stringify(cloned)); alert("Semana duplicada! Clique em 'Semana seguinte' para ver."); }
 
   document.getElementById('q').addEventListener('input',(e)=>{ currentQuery=e.target.value.toLowerCase().trim(); render(); });
@@ -401,7 +472,6 @@
 <!--
 📦 SUPABASE — SCHEMA (Auth + RLS por usuário)
 
--- 1) Estrutura
 create table if not exists public.weeks (
   owner_id uuid not null default auth.uid(),
   week_start date not null,
@@ -411,23 +481,17 @@ create table if not exists public.weeks (
 );
 
 alter table public.weeks enable row level security;
-
--- 2) Remova políticas abertas, se existirem
--- (Na aba Policies, delete as 3 políticas "anon ...")
--- ou via SQL:
+-- Remova políticas abertas, se existirem
 -- drop policy if exists "anon can read weeks" on public.weeks;
 -- drop policy if exists "anon can upsert weeks" on public.weeks;
 -- drop policy if exists "anon can update weeks" on public.weeks;
 
--- 3) Políticas por usuário autenticado
-create policy if not exists "user can read own" on public.weeks for select using (auth.uid() = owner_id);
+create policy if not exists "user can read own"   on public.weeks for select using (auth.uid() = owner_id);
 create policy if not exists "user can insert own" on public.weeks for insert with check (auth.uid() = owner_id);
 create policy if not exists "user can update own" on public.weeks for update using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
 
--- 4) Auth → Providers: habilite Email/Password. (Opcional: desative confirmação de e-mail para uso imediato.)
--- 5) Auth → URL Configuration → Redirect URLs: adicione a URL do seu GitHub Pages.
---    Ex.: https://SEU-USUARIO.github.io/SEU-REPO/
--- 6) Pronto. Cada usuário verá apenas suas semanas.
+-- Para convites por "link mágico": habilite Email no Auth e configure o domínio/redirect em Auth → URL Configuration (use a URL do seu GitHub Pages).
+-- O app usa signInWithOtp() e o Supabase envia o e-mail automaticamente.
 -->
 </body>
 </html>
