@@ -483,5 +483,25 @@ initLogin();
 buildFilters();
 render();
   </script>
+  
+  <!-- Fix login: listener simples e independente -->
+  <script>
+  (function(){
+    function $(id){return document.getElementById(id)}
+    const PASS = (window.PANEL_PASS || 'dipe2025!');
+
+    function toggle(id, on){ const el=$(id); if(!el) return; el.classList.toggle('hidden', !on); }
+    function showApp(){ toggle('login', false); toggle('appHeader', true); toggle('app', true); try{ if(typeof load==='function') load(); }catch(e){} }
+    function showLogin(){ toggle('login', true); toggle('appHeader', false); toggle('app', false); }
+
+    // sessão existente
+    if(sessionStorage.getItem('dipe_ok')==='1'){ showApp(); } else { showLogin(); }
+
+    const btn = $('btnEnter'); const pass = $('pass'); const msg = $('loginMsg');
+    function go(e){ if(e) e.preventDefault(); const v=(pass&&pass.value||'').trim(); if(v===PASS){ sessionStorage.setItem('dipe_ok','1'); if(msg) msg.textContent=''; showApp(); } else { if(msg){ msg.style.color='#b91c1c'; msg.textContent='Senha incorreta'; } } }
+    if(btn){ btn.disabled=false; btn.addEventListener('click', go); }
+    if(pass){ pass.addEventListener('keydown', (e)=>{ if(e.key==='Enter') go(e); }); }
+  })();
+  </script>
 </body>
 </html>
